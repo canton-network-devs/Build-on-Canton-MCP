@@ -936,7 +936,7 @@
     },
     {
       "question": "Featured application?",
-      "answer": "1. Apply via tokenomics committee form\n2. Create FeaturedAppActivityMarker for important events (transfers, mint/burn)\n3. ~$1 USD reward per marker (CIP-0078)\n4. Self-feature on DevNet for testing\nDocs: https://docs.canton.network/appdev/deep-dives/featured-app-activity-marker#featured-app-activity-marker"
+      "answer": "1. Apply via tokenomics committee form\n2. Create FeaturedAppActivityMarker for important events (transfers, mint/burn)\n3. ~$1 USD reward per marker (CIP-0047)\n4. Self-feature on DevNet for testing\nDocs: https://docs.canton.network/appdev/deep-dives/featured-app-activity-marker#featured-app-activity-marker"
     },
     {
       "question": "Signatories and observers?",
