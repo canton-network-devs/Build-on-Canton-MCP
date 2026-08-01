@@ -1,5 +1,5 @@
 {
-  "_version": "1.1.0",
+  "_version": "1.2.0",
   "_updatedAt": "2026-03",
   "_updatedBy": "Jatin, DevRel, Canton Foundation",
   "Note": "This is JSON is enhanced by AI to provide structured data for the Canton MCP server. Kindly maintain the same structure and formatting when updating.",
@@ -818,11 +818,19 @@
     }
   },
   "VERSIONS": {
-    "canton_sdk": "3.4",
-    "splice": "0.5.0",
+    "canton_sdk": "3.5.11",
+    "canton_sdk_source": "https://github.com/digital-asset/canton/releases/tag/v3.5.11",
+    "splice": "0.7.0",
+    "splice_source": "https://github.com/canton-network/splice/tree/0.7.0",
+    "verified_at": "2026-08-01T23:20:00Z",
+    "compatibility_baseline": {
+      "canton_sdk": "3.4",
+      "splice": "0.5.0",
+      "note": "Minimum baseline used by version-specific migration and deprecation entries in this knowledge base."
+    },
     "dpm_install": "curl https://get.digitalasset.com/install/install.sh | sh",
     "prerequisites": "JDK 17+, VS Code",
-    "note": "daml-assistant still works for legacy Canton 3.3 but NOT recommended for new projects."
+    "note": "canton_sdk and splice are the latest reviewed upstream release and release tag, not a claim about versions deployed on every Canton network. Verify network-specific versions independently. daml-assistant remains a legacy Canton 3.3 tool and is not recommended for new projects."
   },
   "ZENITH": {
     "name": "Zenith",
