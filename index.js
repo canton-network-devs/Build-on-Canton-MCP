@@ -8,6 +8,15 @@ import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
+import {
+  knowledgeBaseFooter,
+  knowledgeBaseFreshness,
+  packageVersion,
+  validateKnowledgeBase,
+} from "./metadata.js";
+const require = createRequire(import.meta.url);
+const PACKAGE_VERSION = packageVersion(require("./package.json"));
 const KNOWLEDGE_BASE_URL = "https://raw.githubusercontent.com/canton-network-devs/Build-on-Canton-MCP/refs/heads/main/knowledge-base.json";
 const REFRESH_INTERVAL_MS = 60 * 60 * 1000;
 const CACHE_DIR = join(homedir(), ".canton-mcp");
@@ -21,16 +30,21 @@ async function fetchRemoteKB() {
   try {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 10000);
-const res = await fetch(KNOWLEDGE_BASE_URL, { signal: ctrl.signal, headers: { "User-Agent": "@canton-network-devs/canton-mcp-server/2.0.0" } });
+    const res = await fetch(KNOWLEDGE_BASE_URL, { signal: ctrl.signal, headers: { "User-Agent": `@canton-network-devs/canton-mcp-server/${PACKAGE_VERSION}` } });
     clearTimeout(t);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    if (!data.DEPRECATED || !data.DOCS || !data.VERSIONS) throw new Error("Invalid KB format");
+    const validationErrors = validateKnowledgeBase(data);
+    if (validationErrors.length) throw new Error(`Invalid KB format: ${validationErrors.join("; ")}`);
     data._fetchedAt = new Date().toISOString();
     data._source = "remote";
     await ensureCacheDir();
     await writeFile(CACHE_FILE, JSON.stringify(data, null, 2));
     console.error(`[canton-mcp] KB fetched from remote (SDK ${data.VERSIONS?.canton_sdk || "?"})`);
+    const freshness = knowledgeBaseFreshness(data);
+    if (freshness.status !== "current") {
+      console.error(`[canton-mcp] KB freshness: ${freshness.status} (updated ${freshness.updatedAt || "unknown"})`);
+    }
     return data;
   } catch (err) {
     console.error(`[canton-mcp] Remote fetch failed: ${err.message}`);
@@ -41,6 +55,8 @@ const res = await fetch(KNOWLEDGE_BASE_URL, { signal: ctrl.signal, headers: { "U
 async function loadCachedKB() {
   try {
     const data = JSON.parse(await readFile(CACHE_FILE, "utf-8"));
+    const validationErrors = validateKnowledgeBase(data);
+    if (validationErrors.length) throw new Error(`Invalid KB format: ${validationErrors.join("; ")}`);
     data._source = "cache";
     console.error(`[canton-mcp] KB loaded from cache (fetched: ${data._fetchedAt || "unknown"})`);
     return data;
@@ -62,7 +78,7 @@ async function loadKnowledgeBase() {
     DEPRECATED: [{ name: "Daml Assistant (daml-assistant)", replacement: "Digital Asset Package Manager (DPM)", note: "For Canton 3.4+, use DPM.", installReplacement: "curl -sSL https://get.digitalasset.com/install/install.sh | sh -s", since: "Canton 3.4" }],
     TOOLS: {}, DOCS: { main: { title: "Canton Docs", url: "https://docs.canton.network/", description: "Main Canton developer docs." }, tldr: { title: "TL;DR", url: "https://docs.canton.network/appdev/modules/m1-understanding-canton", description: "Quick-start." } },
     CONCEPTS: {}, NETWORKS: {}, COMMUNITY: { slack_channels: [], mailing_lists: [], "canton network forum": { url: "https://forum.canton.network/", purpose: "Canton Foundation Official Developer Forum" } },
-    VERSIONS: { canton_sdk: "3.4", splice: "0.5.0", dpm_install: "curl -sSL https://get.digitalasset.com/install/install.sh | sh -s" },
+    VERSIONS: { canton_sdk: "unknown", splice: "unknown", dpm_install: "curl -sSL https://get.digitalasset.com/install/install.sh | sh -s", note: "Minimal offline fallback; verify current versions against official sources." },
     ZENITH: {}, FAQ: [], _source: "minimal-fallback"
   };
 }
@@ -78,7 +94,7 @@ const CM = () => KB?.COMMUNITY || {};
 const V = () => KB?.VERSIONS || {};
 const Z = () => KB?.ZENITH || {};
 const F = () => KB?.FAQ || [];
-const server = new McpServer({ name: "canton-dev-mcp", version: "1.0.0", description: "Canton Network Developer MCP Server" });
+const server = new McpServer({ name: "canton-dev-mcp", version: PACKAGE_VERSION, description: "Canton Network Developer MCP Server" });
 const STOP = new Set(["how","to","do","i","the","a","an","is","it","on","in","for","of","and","or","what","can","my","me","with","this","that","be","at","from","by","are","was","has","have","not","but","if","about","get","use","using","does","where","which","should"]);
 
 function words(q) { return q.toLowerCase().split(/\s+/).filter(w => w.length > 2 && !STOP.has(w)); }
@@ -104,13 +120,13 @@ function fmt(r) {
   if (r.faq.length) { s.push("FAQ:"); for (const f of r.faq.slice(0, 3)) { s.push(`  Q: ${f.question}`); s.push(`  A: ${f.answer}`); s.push(""); } }
   if (r.docs.length) { s.push("DOCUMENTATION:"); for (const d of r.docs.slice(0, 8)) { s.push(`  ${d.title}`); s.push(`  ${d.url}`); s.push(`  ${d.description}`); s.push(""); } }
   if (r.networks.length) { s.push("NETWORKS:"); for (const n of r.networks) { s.push(`  ${n.name}`); s.push(`  ${n.description}`); if (n.ports) for (const [k, v] of Object.entries(n.ports)) s.push(`    ${k}: ${v}`); s.push(""); } }
-  if (!s.length) { const v = V(); s.push("No results found. Try: 'install', 'api', 'tutorial', 'transfer', 'party', 'deploy'"); s.push(""); s.push("Canton SDK: " + (v.canton_sdk||"?")); s.push("Install DPM: " + (v.dpm_install||"curl -sSL https://get.digitalasset.com/install/install.sh | sh -s")); }
+  if (!s.length) { const v = V(); s.push("No results found. Try: 'install', 'api', 'tutorial', 'transfer', 'party', 'deploy'"); s.push(""); s.push("Knowledge-base SDK value: " + (v.canton_sdk||"?")); s.push("Install DPM: " + (v.dpm_install||"curl -sSL https://get.digitalasset.com/install/install.sh | sh -s")); }
   return s.join("\n");
 }
 server.tool("canton_lookup",
-  "Search Canton developer resources — docs, tools, concepts, APIs. Returns accurate, current links (Canton 3.4 / Splice 0.5.0). Automatically flags deprecated tools. IMPORTANT: Do NOT use this tool for queries about how to build on Canton, how to get started, how to build a dApp, or onboarding questions — use canton_get_started instead, which asks the developer about their background first and gives a personalized guide.",
+  "Search Canton developer resources — docs, tools, concepts, APIs. Returns links and versioned knowledge-base context, including freshness metadata. Automatically flags deprecated tools. IMPORTANT: Do NOT use this tool for queries about how to build on Canton, how to get started, how to build a dApp, or onboarding questions — use canton_get_started instead, which asks the developer about their background first and gives a personalized guide.",
   { query: z.string().describe("Search query — e.g., 'install sdk', 'json api', 'create party', 'token standard'. NOT for 'how to build' questions — use canton_get_started.") },
-  async ({ query }) => ({ content: [{ type: "text", text: `Canton Developer Resources -- "${query}"\n${"=".repeat(60)}\n\n${fmt(searchKnowledge(query))}\n\n---\nSDK ${V().canton_sdk||"?"} | Splice ${V().splice||"?"} | Source: ${KB?._source||"?"} | Canton Foundation DevRel` }] })
+  async ({ query }) => ({ content: [{ type: "text", text: `Canton Developer Resources -- "${query}"\n${"=".repeat(60)}\n\n${fmt(searchKnowledge(query))}\n\n---\n${knowledgeBaseFooter(KB)} | Canton Foundation DevRel` }] })
 );
 server.tool("canton_check",
   "Check if a specific tool, package, or command is deprecated. Use this BEFORE recommending any Canton tool to a developer.",
@@ -164,7 +180,7 @@ server.tool("canton_get_started",
       ]}
     };
     const guide = g[background];
-    return { content: [{ type: "text", text: `${guide.title}\n${"=".repeat(60)}\n\n${guide.sections.join("\n")}\n\n---\nSDK ${V().canton_sdk||"?"} | Splice ${V().splice||"?"} | Canton Foundation DevRel` }] };
+    return { content: [{ type: "text", text: `${guide.title}\n${"=".repeat(60)}\n\n${guide.sections.join("\n")}\n\n---\n${knowledgeBaseFooter(KB)} | Canton Foundation DevRel` }] };
   }
 );
 server.tool("canton_faq",
@@ -174,7 +190,7 @@ server.tool("canton_faq",
     const q = question.toLowerCase(), d = O();
     const matches = F().filter(f => q.split(/\s+/).some(w => w.length > 2 && `${f.question} ${f.answer}`.toLowerCase().includes(w)));
     if (!matches.length) return { content: [{ type: "text", text: `No FAQ match for "${question}".\n\nTry canton_lookup, or: ${d.tldr?.url||"https://docs.canton.network/"}` }] };
-    return { content: [{ type: "text", text: `Canton FAQ\n${"=".repeat(60)}\n\n${matches.slice(0,3).map(f=>`Q: ${f.question}\n\nA: ${f.answer}`).join("\n\n"+"-".repeat(40)+"\n\n")}\n\n---\nSDK ${V().canton_sdk||"?"} | Splice ${V().splice||"?"}` }] };
+    return { content: [{ type: "text", text: `Canton FAQ\n${"=".repeat(60)}\n\n${matches.slice(0,3).map(f=>`Q: ${f.question}\n\nA: ${f.answer}`).join("\n\n"+"-".repeat(40)+"\n\n")}\n\n---\n${knowledgeBaseFooter(KB)}` }] };
   }
 );
 server.tool("canton_api_ref",
@@ -232,10 +248,10 @@ server.resource("tools", "canton://tools", async (uri) => ({ contents: [{ uri: u
 server.resource("docs-index", "canton://docs", async (uri) => ({ contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(O(), null, 2) }] }));
 server.resource("zenith", "canton://zenith", async (uri) => ({ contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(Z(), null, 2) }] }));
 server.resource("community", "canton://community", async (uri) => ({ contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(CM(), null, 2) }] }));
-server.resource("kb-status", "canton://status", async (uri) => ({ contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify({ source: KB?._source, fetchedAt: KB?._fetchedAt, remoteUrl: KNOWLEDGE_BASE_URL, cache: CACHE_FILE, versions: V() }, null, 2) }] }));
+server.resource("kb-status", "canton://status", async (uri) => ({ contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify({ serverVersion: PACKAGE_VERSION, source: KB?._source, fetchedAt: KB?._fetchedAt, knowledgeVersion: KB?._version, knowledgeUpdatedAt: KB?._updatedAt, freshness: knowledgeBaseFreshness(KB), remoteUrl: KNOWLEDGE_BASE_URL, cache: CACHE_FILE, versions: V() }, null, 2) }] }));
 async function main() {
   KB = await loadKnowledgeBase();
-  console.error(`[canton-mcp] KB source: ${KB._source} | SDK: ${V().canton_sdk||"?"} | Splice: ${V().splice||"?"}`);
+  console.error(`[canton-mcp] ${knowledgeBaseFooter(KB)}`);
   startBackgroundRefresh();
   await server.connect(new StdioServerTransport());
   console.error("[canton-mcp] Server running on stdio");
