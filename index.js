@@ -79,37 +79,56 @@ const V = () => KB?.VERSIONS || {};
 const Z = () => KB?.ZENITH || {};
 const F = () => KB?.FAQ || [];
 const server = new McpServer({ name: "canton-dev-mcp", version: "1.0.0", description: "Canton Network Developer MCP Server" });
-const STOP = new Set(["how","to","do","i","the","a","an","is","it","on","in","for","of","and","or","what","can","my","me","with","this","that","be","at","from","by","are","was","has","have","not","but","if","about","get","use","using","does","where","which","should"]);
+// "canton"/"network"/"daml" are stop words because they appear in nearly every KB entry,
+// which made every query match the whole knowledge base and blow up token usage.
+// Queries consisting ONLY of stop words still work via the fallback in searchKnowledge().
+const STOP = new Set(["how","to","do","i","the","a","an","is","it","on","in","for","of","and","or","what","can","my","me","with","this","that","be","at","from","by","are","was","has","have","not","but","if","about","get","use","using","does","where","which","should","canton","network","daml"]);
 
 function words(q) { return q.toLowerCase().split(/\s+/).filter(w => w.length > 2 && !STOP.has(w)); }
 function score(text, ws, full) { const l = text.toLowerCase(); let s = 0; if (l.includes(full.toLowerCase())) s += 10; for (const w of ws) if (l.includes(w)) s += 1; return s; }
+// Keep only results scoring at least half of the category's top score, then cap the count.
+// This drops single-word noise matches that used to flood responses with 4-5K tokens.
+function topMatches(list, cap) {
+  if (!list.length) return list;
+  list.sort((a, b) => b._s - a._s);
+  const threshold = Math.max(1, Math.ceil(list[0]._s / 2));
+  return list.filter(x => x._s >= threshold).slice(0, cap);
+}
 function searchKnowledge(query) {
   const q = query.toLowerCase(), ws = words(query);
   if (!ws.length) ws.push(...q.split(/\s+/).filter(w => w.length > 1));
   const r = { docs: [], tools: [], concepts: [], deprecated: [], faq: [], networks: [] };
-  for (const [k, d] of Object.entries(O())) { const s2 = score(`${d.title} ${d.description} ${k}`, ws, q); if (s2 >= 1) r.docs.push({ ...d, _s: s2 }); } r.docs.sort((a, b) => b._s - a._s);
-  for (const [k, t] of Object.entries(T())) { const s2 = score(`${t.name} ${t.description} ${k}`, ws, q); if (s2 >= 1) r.tools.push({ ...t, _s: s2 }); } r.tools.sort((a, b) => b._s - a._s);
-  for (const [k, c] of Object.entries(C())) { const s2 = score(`${c.title} ${c.summary} ${k} ${(c.key_points||[]).join(" ")}`, ws, q); if (s2 >= 1) r.concepts.push({ ...c, _s: s2 }); } r.concepts.sort((a, b) => b._s - a._s);
-  for (const d of D()) { if (score(`${d.name} ${d.replacement} ${d.note}`, ws, q) >= 1) r.deprecated.push(d); }
-  for (const f of F()) { const s2 = score(`${f.question} ${f.answer}`, ws, q); if (s2 >= 1) r.faq.push({ ...f, _s: s2 }); } r.faq.sort((a, b) => b._s - a._s);
-  for (const [k, n] of Object.entries(N())) { if (score(`${n.name} ${n.description} ${k}`, ws, q) >= 1) r.networks.push(n); }
+  for (const [k, d] of Object.entries(O())) { const s2 = score(`${d.title} ${d.description} ${k}`, ws, q); if (s2 >= 1) r.docs.push({ ...d, _s: s2 }); }
+  for (const [k, t] of Object.entries(T())) { const s2 = score(`${t.name} ${t.description} ${k}`, ws, q); if (s2 >= 1) r.tools.push({ ...t, _s: s2 }); }
+  for (const [k, c] of Object.entries(C())) { const s2 = score(`${c.title} ${c.summary} ${k} ${(c.key_points||[]).join(" ")}`, ws, q); if (s2 >= 1) r.concepts.push({ ...c, _s: s2 }); }
+  // Match deprecations on name/replacement only; matching on the note text caused false positives.
+  for (const d of D()) { const s2 = score(`${d.name} ${d.replacement}`, ws, q); if (s2 >= 1) r.deprecated.push({ ...d, _s: s2 }); }
+  // Match FAQs on the question only; matching on long answer bodies caused false positives.
+  for (const f of F()) { const s2 = score(`${f.question}`, ws, q); if (s2 >= 1) r.faq.push({ ...f, _s: s2 }); }
+  for (const [k, n] of Object.entries(N())) { const s2 = score(`${n.name} ${n.description} ${k}`, ws, q); if (s2 >= 1) r.networks.push({ ...n, _s: s2 }); }
+  r.docs = topMatches(r.docs, 5);
+  r.tools = topMatches(r.tools, 3);
+  r.concepts = topMatches(r.concepts, 3);
+  r.deprecated = topMatches(r.deprecated, 3);
+  r.faq = topMatches(r.faq, 2);
+  r.networks = topMatches(r.networks, 2);
   return r;
 }
 
 function fmt(r) {
   const s = [];
   if (r.deprecated.length) { s.push("DEPRECATION WARNINGS:"); for (const d of r.deprecated) { s.push(`  ${d.name} -> Use: ${d.replacement}`); s.push(`     ${d.note}`); if (d.installReplacement) s.push(`     Install: ${d.installReplacement}`); } s.push(""); }
-  if (r.concepts.length) { s.push("CONCEPTS:"); for (const c of r.concepts) { s.push(`  ${c.title}`); s.push(`  ${c.summary}`); if (c.key_points) for (const p of c.key_points) s.push(`    - ${p}`); if (c.differences) { s.push("  Comparison:"); for (const d of c.differences) s.push(`    EVM: ${d.evm}  ->  Canton: ${d.canton}`); } s.push(""); } }
-  if (r.tools.length) { s.push("TOOLS:"); for (const t of r.tools) { s.push(`  ${t.name}`); s.push(`  ${t.description}`); if (t.install) s.push(`  Install: ${t.install}`); if (t.docs) s.push(`  Docs: ${t.docs}`); if (t.url) s.push(`  URL: ${t.url}`); if (t.commands) { s.push("  Commands:"); for (const [c, d] of Object.entries(t.commands)) s.push(`    ${c} -- ${d}`); } s.push(""); } }
-  if (r.faq.length) { s.push("FAQ:"); for (const f of r.faq.slice(0, 3)) { s.push(`  Q: ${f.question}`); s.push(`  A: ${f.answer}`); s.push(""); } }
-  if (r.docs.length) { s.push("DOCUMENTATION:"); for (const d of r.docs.slice(0, 8)) { s.push(`  ${d.title}`); s.push(`  ${d.url}`); s.push(`  ${d.description}`); s.push(""); } }
+  if (r.concepts.length) { s.push("CONCEPTS:"); for (const c of r.concepts) { s.push(`  ${c.title}`); s.push(`  ${c.summary}`); if (c.key_points) for (const p of c.key_points.slice(0, 5)) s.push(`    - ${p}`); s.push(""); } }
+  if (r.tools.length) { s.push("TOOLS:"); for (const t of r.tools) { s.push(`  ${t.name} -- ${t.description}`); if (t.install) s.push(`  Install: ${t.install}`); if (t.docs) s.push(`  Docs: ${t.docs}`); else if (t.url) s.push(`  URL: ${t.url}`); if (t.commands) { const cmds = Object.entries(t.commands).slice(0, 5); s.push(`  Commands: ${cmds.map(([c]) => c).join(", ")}`); } s.push(""); } }
+  if (r.faq.length) { s.push("FAQ:"); for (const f of r.faq) { s.push(`  Q: ${f.question}`); s.push(`  A: ${f.answer}`); s.push(""); } }
+  if (r.docs.length) { s.push("DOCUMENTATION:"); for (const d of r.docs) { s.push(`  ${d.title} -- ${d.url}`); } s.push(""); }
   if (r.networks.length) { s.push("NETWORKS:"); for (const n of r.networks) { s.push(`  ${n.name}`); s.push(`  ${n.description}`); if (n.ports) for (const [k, v] of Object.entries(n.ports)) s.push(`    ${k}: ${v}`); s.push(""); } }
   if (!s.length) { const v = V(); s.push("No results found. Try: 'install', 'api', 'tutorial', 'transfer', 'party', 'deploy'"); s.push(""); s.push("Canton SDK: " + (v.canton_sdk||"?")); s.push("Install DPM: " + (v.dpm_install||"curl -sSL https://get.digitalasset.com/install/install.sh | sh -s")); }
   return s.join("\n");
 }
 server.tool("canton_lookup",
-  "Search Canton developer resources — docs, tools, concepts, APIs. Returns accurate, current links (Canton 3.4 / Splice 0.5.0). Automatically flags deprecated tools. IMPORTANT: Do NOT use this tool for queries about how to build on Canton, how to get started, how to build a dApp, or onboarding questions — use canton_get_started instead, which asks the developer about their background first and gives a personalized guide.",
-  { query: z.string().describe("Search query — e.g., 'install sdk', 'json api', 'create party', 'token standard'. NOT for 'how to build' questions — use canton_get_started.") },
+  "Search Canton developer resources — docs, tools, concepts, APIs. Flags deprecated tools. For 'how to build' / getting-started / onboarding questions use canton_get_started instead.",
+  { query: z.string().describe("Search query — e.g., 'install sdk', 'json api', 'create party', 'token standard'.") },
   async ({ query }) => ({ content: [{ type: "text", text: `Canton Developer Resources -- "${query}"\n${"=".repeat(60)}\n\n${fmt(searchKnowledge(query))}\n\n---\nSDK ${V().canton_sdk||"?"} | Splice ${V().splice||"?"} | Source: ${KB?._source||"?"} | Canton Foundation DevRel` }] })
 );
 server.tool("canton_check",
@@ -124,8 +143,8 @@ server.tool("canton_check",
   }
 );
 server.tool("canton_get_started",
-  "ALWAYS use this tool when a developer asks how to build on Canton, how to get started with Canton, how to build a dApp on Canton, how to build on Daml, how to develop on Canton Network, getting started with Canton, or any onboarding/quickstart question. This tool asks the developer about their background FIRST and then generates a personalized guide. Use this instead of canton_lookup for any 'how to build' or 'get started' question.",
-  { background: z.enum(["evm","solana","sui_move","web_dev","enterprise","new_to_blockchain"]).describe("Developer's primary background. ALWAYS ask the user to select this before proceeding.") },
+  "Use for any 'how to build on Canton/Daml', getting-started, or onboarding question (instead of canton_lookup). Ask the developer's background first, then this returns a personalized quickstart guide.",
+  { background: z.enum(["evm","solana","sui_move","web_dev","enterprise","new_to_blockchain"]).describe("Developer's primary background. Ask the user to select this before proceeding.") },
   async ({ background }) => {
     const d = O();
     const g = {
@@ -171,10 +190,12 @@ server.tool("canton_faq",
   "Search hackathon FAQs for Canton development. Covers installation, party creation, contracts, APIs, deployment, tokens, and common gotchas.",
   { question: z.string().describe("Developer's question — e.g., 'how do I install', 'create party', 'deploy to testnet'") },
   async ({ question }) => {
-    const q = question.toLowerCase(), d = O();
-    const matches = F().filter(f => q.split(/\s+/).some(w => w.length > 2 && `${f.question} ${f.answer}`.toLowerCase().includes(w)));
+    const q = question.toLowerCase(), d = O(), ws = words(question);
+    if (!ws.length) ws.push(...q.split(/\s+/).filter(w => w.length > 1));
+    const scored = F().map(f => ({ ...f, _s: score(f.question, ws, q) })).filter(f => f._s >= 1);
+    const matches = topMatches(scored, 3);
     if (!matches.length) return { content: [{ type: "text", text: `No FAQ match for "${question}".\n\nTry canton_lookup, or: ${d.tldr?.url||"https://docs.canton.network/"}` }] };
-    return { content: [{ type: "text", text: `Canton FAQ\n${"=".repeat(60)}\n\n${matches.slice(0,3).map(f=>`Q: ${f.question}\n\nA: ${f.answer}`).join("\n\n"+"-".repeat(40)+"\n\n")}\n\n---\nSDK ${V().canton_sdk||"?"} | Splice ${V().splice||"?"}` }] };
+    return { content: [{ type: "text", text: `Canton FAQ\n${"=".repeat(60)}\n\n${matches.map(f=>`Q: ${f.question}\n\nA: ${f.answer}`).join("\n\n"+"-".repeat(40)+"\n\n")}\n\n---\nSDK ${V().canton_sdk||"?"} | Splice ${V().splice||"?"}` }] };
   }
 );
 server.tool("canton_api_ref",
@@ -226,12 +247,12 @@ server.tool("canton_network_info",
   }
 );
 
-server.resource("deprecations", "canton://deprecations", async (uri) => ({ contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(D(), null, 2) }] }));
-server.resource("versions", "canton://versions", async (uri) => ({ contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(V(), null, 2) }] }));
-server.resource("tools", "canton://tools", async (uri) => ({ contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(T(), null, 2) }] }));
-server.resource("docs-index", "canton://docs", async (uri) => ({ contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(O(), null, 2) }] }));
-server.resource("zenith", "canton://zenith", async (uri) => ({ contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(Z(), null, 2) }] }));
-server.resource("community", "canton://community", async (uri) => ({ contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(CM(), null, 2) }] }));
+server.resource("deprecations", "canton://deprecations", async (uri) => ({ contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(D()) }] }));
+server.resource("versions", "canton://versions", async (uri) => ({ contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(V()) }] }));
+server.resource("tools", "canton://tools", async (uri) => ({ contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(T()) }] }));
+server.resource("docs-index", "canton://docs", async (uri) => ({ contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(O()) }] }));
+server.resource("zenith", "canton://zenith", async (uri) => ({ contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(Z()) }] }));
+server.resource("community", "canton://community", async (uri) => ({ contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(CM()) }] }));
 server.resource("kb-status", "canton://status", async (uri) => ({ contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify({ source: KB?._source, fetchedAt: KB?._fetchedAt, remoteUrl: KNOWLEDGE_BASE_URL, cache: CACHE_FILE, versions: V() }, null, 2) }] }));
 async function main() {
   KB = await loadKnowledgeBase();

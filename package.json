@@ -1,6 +1,6 @@
 {
   "name": "@canton-network-devs/canton-mcp-server",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "description": "Canton Network MCP Server for Claude Desktop",
   "type": "module",
   "main": "index.js",
