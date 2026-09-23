@@ -1,9 +1,8 @@
 {
-  "_version": "1.2.0",
-  "_updatedAt": "2026-03",
-  "_updatedBy": "Jatin, DevRel, Canton Foundation",
+  "_version": "1.3.0",
+  "_updatedAt": "2026-09",
+  "_updatedBy": "Jatin, DevRel Manager, Canton Foundation",
   "Note": "This is JSON is enhanced by AI to provide structured data for the Canton MCP server. Kindly maintain the same structure and formatting when updating.",
-
   "DEPRECATED": [
     {
       "name": "Daml Assistant (daml-assistant)",
@@ -80,7 +79,7 @@
     },
     {
       "name": "splice-wallet-payments subscription",
-      "replacement": "Token Standard (CIP-0056) DVP workflows",
+      "replacement": "Token Standard (CIP-0056 / CIP-0112) DVP workflows",
       "note": "CC subscription workflow in splice-wallet-payments is deprecated. Use token standard DVP workflows.",
       "since": "Splice 0.4+"
     },
@@ -89,6 +88,66 @@
       "replacement": "prune_archived_to_offset()",
       "note": "Deprecated since 3.5.0. Known to cause deadlocks and performance bottlenecks.",
       "since": "Canton 3.5"
+    },
+    {
+      "name": "TransferCommand + validator endpoints /v0/admin/external-party/transfer-preapproval/prepare-send and /submit-send",
+      "replacement": "Token Standard transfers (Transfer Instruction API)",
+      "note": "REMOVED in Splice 0.8.0 (disabled by default in 0.7.0). Token standard transfers support the 24h submission delay (CIP-0107). Remove the enable-deprecated-transfer-command-support flag.",
+      "since": "Splice 0.8.0"
+    },
+    {
+      "name": "Hard Synchronizer/Domain Migrations (HDM) and HDM-based disaster recovery",
+      "replacement": "Logical Synchronizer Upgrades (LSU, CIP-0117)",
+      "note": "LSU is the only supported mechanism for protocol upgrades and network-wide disaster recovery. MIGRATION_ID is frozen — keep your current value. Validator config domain-migration-dump-path was removed.",
+      "since": "Splice 0.6.2"
+    },
+    {
+      "name": "splice-postgres Helm chart / PostgreSQL 14",
+      "replacement": "Self-provisioned or managed PostgreSQL (e.g. Amazon RDS, Google Cloud SQL), version 17 or 18",
+      "note": "PostgreSQL 14 reaches end of life on 2026-11-12. No new splice-postgres chart versions after 2026-10-12 and no support after 2026-11-12. Splice officially supports PostgreSQL 18 since 0.7.0; Canton recommends 17. Migration guide: https://docs.canton.network/global-synchronizer/production-operations/validator-postgres-migration",
+      "since": "Splice 0.6.13"
+    },
+    {
+      "name": "Scan POST /v1/state/acs and /v1/holdings/state",
+      "replacement": "/v2/state/acs and /v2/holdings/state",
+      "note": "Only change: pagination token (after / next_page_token) is now a String instead of a number. v1 planned for removal in Splice 0.9.0.",
+      "since": "Splice 0.7.5"
+    },
+    {
+      "name": "Scan /v0/holdings/summary",
+      "replacement": "/v1/holdings/summary",
+      "note": "v1 drops the accumulated_holding_fees_* and total_available_coin fields and the as_of_round parameter (not meaningful aggregates). Also exposed on the validator scan-proxy.",
+      "since": "Splice 0.6.3"
+    },
+    {
+      "name": "Scan leaderboard/aggregate endpoints (/v0/activities, /v0/transactions, /v0/top-*, /v0/round-totals, /v0/round-party-totals, /v0/aggregated-rounds, /v0/rewards-collected, /v0/round-of-latest-data, /v0/total-amulet-balance, /v0/wallet-balance)",
+      "replacement": "/v0/events, /v2/updates, /registry/metadata/v1/instruments/{instrumentId}, /v1/holdings/summary, or your own Ledger API / PQS",
+      "note": "Removed across Splice 0.5.8–0.7.0.",
+      "since": "Splice 0.5.8–0.7.0"
+    },
+    {
+      "name": "SV app public /v0/dso",
+      "replacement": "Scan app public /v0/dso (no SV credentials) or SV app /v1/dso (SV operator auth)",
+      "note": "Planned for removal in Splice 0.9.0.",
+      "since": "Splice 0.8.0"
+    },
+    {
+      "name": "Featured-app-right in Scan choice context for CC transfers/allocations",
+      "replacement": "Explicitly fetch /api/scan/v0/featured-apps/{provider_party_id} and pass it under the 'featured-app-right' choice-context key",
+      "note": "Takes effect once SVs set 'no-featured-app-choice-context' in svOperationsSwitchOverTimes. Prevents apps from unintentionally creating markers outside Canton Foundation marker guidance. Validators must be on Splice 0.8.0+ before the vote.",
+      "since": "Splice 0.8.0"
+    },
+    {
+      "name": "Exception-based control flow / rollback nodes in Daml",
+      "replacement": "failWithStatus (FailureStatus with error_id)",
+      "note": "Protocol version 35 does not support rollback nodes. Splice AmuletRules now fails with error ids such as splice.lfdecentralizedtrust.org/insufficient-funds instead of InvalidTransfer exceptions — update any error parsing.",
+      "since": "Splice 0.6.1 / Canton 3.5 (PV35)"
+    },
+    {
+      "name": "scan_txlog.py script",
+      "replacement": "Token-standard-compliant transaction history parsing (V2 EventLog_HoldingsChange events)",
+      "note": "Deprecated and unmaintained; will be removed.",
+      "since": "Splice 0.5.13"
     }
   ],
   "TOOLS": {
@@ -116,7 +175,8 @@
         "dpm pqs": "Participant Query Store",
         "dpm docs": "Generate Daml doc comments",
         "dpm validate-dar <f>": "Validate DAR archive",
-        "dpm install <ver>": "Install specific SDK version"
+        "dpm install <ver>": "Install specific SDK version",
+        "dpm new <n> --template empty-skeleton": "Minimal empty project to start from scratch (used in the Dev Hub quick start)"
       },
       "config": "daml.yaml (per-package), multi-package.yaml (multi-package builds), ${DPM_HOME}/dpm-config.yaml (global). Supports ${ENV_VAR} interpolation. Env overrides: DPM_SDK_VERSION, DPM_REGISTRY, DPM_LOG_LEVEL, DAML_PACKAGE.",
       "docs": "https://docs.canton.network/sdks-tools/cli-tools/dpm"
@@ -126,14 +186,12 @@
       "description": "Local Canton ledger. Start via 'dpm sandbox'. JSON API port 7575, gRPC port 6866.",
       "docs": "https://docs.canton.network/sdks-tools/development-tools/sandbox"
     },
-
     "vscode_daml": {
       "name": "Daml VS Code Extension",
       "description": "Syntax highlighting, inline script results, error checking, code coverage. Launch: dpm studio.",
       "install": "Search 'Daml' in VS Code Extensions or run 'dpm studio'",
       "docs": "https://docs.canton.network/sdks-tools/development-tools/daml-studio"
     },
-
     "dapp_sdk": {
       "name": "dApp SDK (CIP-0103)",
       "source": "Digital Asset — Wallet Unit",
@@ -144,12 +202,14 @@
         "Supports asynchronous flows (server-side / mobile wallets)",
         "Wallet connection and transaction request lifecycle"
       ],
-      "targetUsers": ["dApp developers", "Application builders on Canton"],
+      "targetUsers": [
+        "dApp developers",
+        "Application builders on Canton"
+      ],
       "relatedComponent": "discovery_component",
       "note": "Always pair with the Discovery Component so users can see and pick wallets.",
-      "docs": "https://docs.canton.network"
+      "docs": "https://docs.canton.network/sdks-tools/sdks/dapp-sdk/overview"
     },
-    
     "discovery_component": {
       "name": "Discovery Component",
       "source": "Digital Asset — Wallet Unit",
@@ -159,11 +219,12 @@
         "Handles wallet selection UX",
         "Plug-and-play — no bespoke wallet integration needed"
       ],
-      "targetUsers": ["dApp developers"],
+      "targetUsers": [
+        "dApp developers"
+      ],
       "analogEthereum": "RainbowKit / WalletConnect modal",
       "note": "Network effect: every new wallet that implements CIP-0103 automatically appears here — dApps get it for free."
     },
-    
     "wallet_gateway": {
       "name": "Wallet Gateway",
       "source": "Digital Asset — Wallet Unit",
@@ -175,13 +236,22 @@
         "Private keys never leave the custody provider's infrastructure",
         "Supports multi-party setups"
       ],
-      "targetUsers": ["Institutional validators", "Exchanges", "Custodians", "Anyone self-hosting a node with external key management"],
-      "signingDrivers": ["Fireblocks", "BitGo", "DFNS", "Blockdaemon"],
+      "targetUsers": [
+        "Institutional validators",
+        "Exchanges",
+        "Custodians",
+        "Anyone self-hosting a node with external key management"
+      ],
+      "signingDrivers": [
+        "Fireblocks",
+        "BitGo",
+        "DFNS",
+        "Blockdaemon"
+      ],
       "deploymentModel": "Deployed in user's own environment, adjacent to validator node",
       "note": "Signing driver abstraction means new custody providers can be added without changing the gateway itself.",
       "docs": "https://docs.canton.network"
     },
-    
     "reference_wallet": {
       "name": "Reference Wallet",
       "source": "Digital Asset — Wallet Unit",
@@ -193,7 +263,10 @@
         "Key recovery / import flow",
         "CIP-0103 compliant (dApp connectivity)"
       ],
-      "targetUsers": ["End users", "Wallet developers (as reference implementation)"],
+      "targetUsers": [
+        "End users",
+        "Wallet developers (as reference implementation)"
+      ],
       "strategicPurpose": [
         "Dogfoods DA's own SDKs and standards",
         "Gives external wallet teams a production-grade reference to build from",
@@ -202,7 +275,6 @@
       "note": "Does NOT bundle validator access. Users still need a validator node to use Canton. Provides wallet layer only.",
       "availability": "Available as GitHub repo for download and self-deployment"
     },
-    
     "portfolio_ui": {
       "name": "Portfolio UI (dApp Portfolio)",
       "source": "Digital Asset — Wallet Unit",
@@ -214,11 +286,13 @@
         "Works with any CIP-0103 compliant wallet",
         "Supports Wallet Gateway setups (multi-party)"
       ],
-      "targetUsers": ["End users", "dApp developers (as reference implementation)"],
+      "targetUsers": [
+        "End users",
+        "dApp developers (as reference implementation)"
+      ],
       "note": "Expected to replace the splice amulet wallet UI currently bundled with validator tooling. Clone, install, connect wallet.",
       "availability": "Open source"
     },
-
     "pqs": {
       "name": "Participant Query Store (PQS)",
       "description": "Ingests ledger data into PostgreSQL for SQL querying. Executable: 'scribe'. Enables SQL on Daml ledger state (contracts) and history (events). Point-in-time queries, party/template filtering, JSONB columns.",
@@ -230,7 +304,7 @@
         "--source-ledger-host/port": "Participant gRPC connection (default 6865)",
         "--target-postgres-host/port/database": "PostgreSQL connection"
       },
-      "requirements": "PQS: 4GB RAM, 4 CPU. PostgreSQL: 8GB RAM, 8 CPU. JDK 17+. Tune PostgreSQL (default Docker config is inadequate).",
+      "requirements": "PQS: 4GB RAM, 4 CPU. PostgreSQL: 8GB RAM, 8 CPU. JDK 17+. Tune PostgreSQL (default Docker config is inadequate). Use PostgreSQL 17 or 18 — PostgreSQL 14 is EOL on 2026-11-12.",
       "security": "Only canReadAs/readAsAnyParty needed. No actAs or admin access. Restrict DB users to minimum privileges.",
       "docs": "https://docs.canton.network/sdks-tools/development-tools/pqs"
     },
@@ -238,13 +312,76 @@
       "name": "Daml Shell",
       "description": "Interactive Daml exploration tool. Connects to PQS PostgreSQL database by default. Part of CN Quickstart modules.",
       "docs": "https://docs.canton.network/sdks-tools/cli-tools/daml-shell"
+    },
+    "wallet_sdk": {
+      "name": "Wallet SDK",
+      "source": "Digital Asset — Wallet Unit",
+      "description": "TypeScript library for programmatic wallet operations on Canton: party management, token transfers, UTXO queries, delegations, token standard workflows. For wallets, exchanges, custodians and NaaS providers.",
+      "docs": "https://docs.canton.network/sdks-tools/sdks/wallet-sdk"
+    },
+    "canton_builder_tool": {
+      "name": "Canton Builder Tool",
+      "source": "Canton Foundation DevRel (official)",
+      "description": "One-command CLI that runs the official Splice LocalNet (3 validators: app-provider, app-user, sv; synchronizer; CC wallets; Scan UI) and deploys your DAR. Fastest path from 'I have a .dar' to a running local Canton Network — no DevNet whitelisting needed.",
+      "install": "curl -fsSL https://raw.githubusercontent.com/canton-network-devs/Canton-Builder-Tool/main/install.sh | bash\nthen: source ~/.zshrc (or ~/.bashrc)",
+      "requirements": "Docker Desktop with >= 8 GB memory, curl, jq, git. macOS or Linux; Windows via WSL 2. Installer sets PATH and /etc/hosts for *.localhost.",
+      "commands": {
+        "canton builder start": "Download Splice LocalNet bundle (cached in ~/.canton-builder/bundle/) and boot LocalNet; later runs boot in ~30s",
+        "canton builder stop": "Stop containers (data preserved)",
+        "canton builder status": "Health check + port reference",
+        "canton builder deploy ./my-app-0.0.1.dar": "Upload DAR to app-provider and app-user participants; prints package ID and template ID format",
+        "canton builder logs [service]": "Tail all logs or one service",
+        "canton builder reset": "Wipe everything, start clean"
+      },
+      "upgrade": "Edit IMAGE_TAG in ~/.canton-builder/.env, then 'canton builder reset', 'rm -rf ~/.canton-builder/bundle', 'canton builder start'",
+      "isNot": "Not a replacement for cn-quickstart (no reference app, backend or frontend) — network layer only, bring your own Daml project.",
+      "repo": "https://github.com/canton-network-devs/Canton-Builder-Tool",
+      "docs": "https://guide.canton.foundation/localnet"
+    },
+    "cf_daml_skill": {
+      "name": "CF Daml Skill (Claude Skill)",
+      "source": "Canton Foundation (official)",
+      "description": "Claude Skill that gives AI assistants up-to-date, correct Daml and Canton knowledge (templates, choices, auth, testing, Token Standard V2, dpm, Canton 3.4/3.5).",
+      "install": "npx @canton-network-devs/cf-daml-skill  (auto-installs to Claude Desktop, or builds a zip to upload to Claude.ai)",
+      "repo": "https://github.com/canton-network-devs/CF-Daml-Skill"
+    },
+    "canton_mcp": {
+      "name": "Canton Foundation MCP (Build-on-Canton-MCP)",
+      "source": "Canton Foundation (official)",
+      "description": "MCP server that plugs accurate Canton docs and this knowledge base into Claude and other AI tools, preventing hallucinated or outdated answers.",
+      "repo": "https://github.com/canton-network-devs/Build-on-Canton-MCP"
+    },
+    "dev_hub": {
+      "name": "Canton Developer Hub (tooling catalogue)",
+      "source": "Canton Foundation DevRel (official)",
+      "description": "Curated catalogue of tools, SDKs, APIs, AI tools, explorers, wallet SDKs and infrastructure for building on Canton. Each tool is tagged Official (Canton Network) or Partner/Community, with maker, Dev Fund status and last-updated date.",
+      "categories": [
+        "Getting Started",
+        "Smart Contract Dev",
+        "AI Tools",
+        "Local Dev",
+        "SDKs",
+        "APIs",
+        "Data & Indexing",
+        "Wallet Integration",
+        "Identity"
+      ],
+      "url": "https://dev-hub.canton.foundation/",
+      "liveData": "https://raw.githubusercontent.com/canton-network-devs/Canton-Developer-Hub/main/Github%20Page/tools.json",
+      "note": "For any 'is there a tool/SDK/explorer/wallet SDK for X on Canton?' question, check the Dev Hub (or its tools.json) instead of relying on a hardcoded list.",
+      "repo": "https://github.com/canton-network-devs/Canton-Developer-Hub"
     }
   },
   "DOCS": {
     "main": {
-      "title": "Canton App Dev Docs (v3.4)",
+      "title": "Canton Network Docs",
       "url": "https://docs.canton.network",
-      "description": "Main entry point for Canton Network app development."
+      "description": "Main entry point for Canton Network app development, operations and reference."
+    },
+    "llms_index": {
+      "title": "Docs Index for LLMs (llms.txt)",
+      "url": "https://docs.canton.network/llms.txt",
+      "description": "Machine-readable index of every docs.canton.network page. Use it to discover the right page before answering."
     },
     "tldr": {
       "title": "TL;DR for New Developers",
@@ -366,34 +503,94 @@
       "url": "https://docs.canton.network/appdev/deep-dives/token-standard#token-standard",
       "description": "Standard APIs: holdings, FOP transfers, DVP allocations, metadata."
     },
+    "token_standard_v2": {
+      "title": "Token Standard V2 (CIP-0112)",
+      "url": "https://github.com/canton-foundation/cips/blob/main/cip-0112/cip-0112.md",
+      "description": "V2 improvements for privacy, performance and traditional accounting: committed/iterated allocations, accounts, V2 transaction history events. Live since Splice 0.6.11. Daml definitions: https://github.com/canton-network/splice/tree/main/token-standard"
+    },
     "featured_app": {
       "title": "Featured App Rewards",
       "url": "https://docs.canton.network/appdev/modules/m4-featured-app-activity-marker",
-      "description": "CIP-0047: earn app rewards with FeaturedAppActivityMarker."
+      "description": "CIP-0047 FeaturedAppActivityMarker model, being replaced by CIP-0104 traffic-based app rewards. See CONCEPTS.traffic_based_app_rewards."
     },
-    "validator_docker": {
-      "title": "Validator (Docker)",
-      "url": "https://docs.canton.network/global-synchronizer/deployment/validator-docker-compose#docker-compose-validator-deployment",
-      "description": "Docker Compose validator. wallet.localhost, json-ledger-api.localhost."
+    "app_rewards": {
+      "title": "App Rewards and Minting Delegation",
+      "url": "https://docs.canton.network/appdev/app-rewards",
+      "description": "How app reward coupons are minted, including minting delegations for external parties (CIP-0073)."
     },
-    "validator_k8s": {
-      "title": "Validator (Kubernetes)",
-      "url": "https://docs.canton.network/global-synchronizer/deployment/validator-kubernetes",
-      "description": "Helm chart deployment. OIDC/RS256 auth."
+    "reward_sharing": {
+      "title": "Reward Sharing",
+      "url": "https://docs.canton.network/global-synchronizer/splice-fundamentals/reward-sharing#reward-sharing",
+      "description": "Assign reward coupons to beneficiaries. reward-sharing-config-by-party supports type=built-in (validator app mints/assigns) or type=external (your own process assigns; Splice 0.7.1+)."
     },
-    "validator_onboarding": {
-      "title": "Validator Onboarding",
-      "url": "https://docs.canton.network/global-synchronizer/deployment/onboarding-process",
-      "description": "Steps to onboard as a Canton Network validator."
+    "cip_0104": {
+      "title": "CIP-0104 — Traffic-Based App Rewards",
+      "url": "https://github.com/canton-foundation/cips/blob/main/cip-0104/cip-0104.md",
+      "description": "App rewards computed from traffic actually burned by transactions, replacing activity markers."
     },
-    "external_party": {
-      "title": "External Party Onboarding",
-      "url": "https://docs.canton.network/appdev/deep-dives/external-signing-onboarding#onboard-external-party",
-      "description": "External parties with own signing keys. Python examples."
+    "cips_repo": {
+      "title": "Canton Improvement Proposals (CIPs) — GitHub (source of truth)",
+      "url": "https://github.com/canton-foundation/cips",
+      "description": "All numbered CIPs with status. README table lists number, title, author, type and status. Machine-readable: https://raw.githubusercontent.com/canton-foundation/cips/main/README.md"
+    },
+    "cips_open_prs": {
+      "title": "CIPs in progress (open pull requests)",
+      "url": "https://github.com/canton-foundation/cips/pulls",
+      "description": "Draft CIPs and amendments not yet merged. API (no key): https://api.github.com/repos/canton-foundation/cips/pulls?state=open"
+    },
+    "dev_fund_repo": {
+      "title": "Canton Development Fund — GitHub",
+      "url": "https://github.com/canton-foundation/canton-dev-fund",
+      "description": "Dev Fund proposals (as PRs), review process, AI policy, SIG directory, strategic roadmap and RFPs."
+    },
+    "dev_fund_proposals": {
+      "title": "Dev Fund — Merged Proposals",
+      "url": "https://github.com/canton-foundation/canton-dev-fund/tree/main/proposals",
+      "description": "Every file in /proposals on main is a merged proposal. Individual initiatives go here."
+    },
+    "dev_fund_roadmap": {
+      "title": "2026–2028 Splice and Canton Strategic Roadmap & 2026–2027 RFPs",
+      "url": "https://github.com/canton-foundation/canton-dev-fund/blob/main/2026-2028-strategic-roadmap.md",
+      "description": "Technical areas where the Foundation seeks contributions and prioritizes Dev Fund resources. Read before submitting a proposal."
+    },
+    "dev_fund_rfps": {
+      "title": "Dev Fund — Requests for Proposals",
+      "url": "https://github.com/canton-foundation/canton-dev-fund/tree/main/rfps",
+      "description": "RFP-aligned proposals go in the matching category folder: developer-experience-tooling-education, financial-markets-standards-verification, governance-identity-network-coordination, protocol-infrastructure-scalability-resilience, security-assurance-incident-readiness."
+    },
+    "release_notes_hub": {
+      "title": "Release Notes Hub",
+      "url": "https://docs.canton.network/release-notes",
+      "description": "Release notes for Canton, Splice, and tools (PQS, Daml Shell, Daml language), plus versioning and support policy."
+    },
+    "splice_release_notes": {
+      "title": "Splice Release Notes",
+      "url": "https://docs.canton.network/global-synchronizer/release-notes/splice",
+      "description": "Every Splice release with breaking changes, required Daml package versions and action items for validators, SVs and app devs. Check here for the latest version."
+    },
+    "canton_release_notes": {
+      "title": "Canton Release Notes",
+      "url": "https://docs.canton.network/global-synchronizer/release-notes/canton",
+      "description": "Per-release Canton notes. GitHub releases: https://github.com/digital-asset/canton/releases"
+    },
+    "validator_postgres_migration": {
+      "title": "Validator PostgreSQL Migration",
+      "url": "https://docs.canton.network/global-synchronizer/production-operations/validator-postgres-migration",
+      "description": "Move a validator off the deprecated splice-postgres chart / PostgreSQL 14 (EOL 2026-11-12) to self-provisioned or managed PostgreSQL."
+    },
+    "cryptographic_keys": {
+      "title": "Cryptographic Keys (KMS, session signing keys)",
+      "url": "https://docs.canton.network/overview/learn/cryptographic-keys",
+      "description": "KMS-backed participants; session signing keys officially supported since Splice 0.7.2 to reduce KMS load and cost."
+    },
+    "scan_api": {
+      "title": "Scan API Discovery",
+      "url": "https://docs.canton.network/sdks-tools/api-reference/splice-scan-api",
+      "description": "Find Scan API URLs for all networks."
     },
     "xreserve": {
       "title": "xReserve (USDC Bridge)",
-      "url": "https://docs.digitalasset.com/build/3.4/network-info/xreserve.html",
+      "url": "https://docs.digitalasset.com/usdcx-xreserve/overview",
       "description": "Bridge USDC Ethereum->Canton. UI: https://digital-asset.github.io/xreserve-deposits/"
     },
     "Bridge LayerZero": {
@@ -401,15 +598,10 @@
       "url": "https://docs.layerzero.network/",
       "description": "LayerZero is the first interoperability protocol to deploy on Canton, enabling cross-chain asset transfers with configurable privacy."
     },
-    "scan_api": {
-      "title": "Scan API Discovery",
-      "url": "https://docs.canton.network/sdks-tools/api-reference/splice-scan-api",
-      "description": "Find Scan API URLs for all networks."
-    },
     "github_splice": {
       "title": "Splice (GitHub)",
-      "url": "https://github.com/hyperledger-labs/splice",
-      "description": "Open-source: CC, CNS, governance, token standard."
+      "url": "https://github.com/canton-network/splice",
+      "description": "Open-source: CC, CNS, governance, token standard (V1 + V2), DAR files under daml/dars."
     },
     "github_quickstart": {
       "title": "CN Quickstart (GitHub)",
@@ -434,7 +626,7 @@
     "splice_localnet": {
       "title": "Splice LocalNet (Docker Compose)",
       "url": "https://docs.canton.network/sdks-tools/development-tools/localnet",
-      "description": "3 participants (app-provider/app-user/sv), PostgreSQL, wallet/sv/scan UIs. Dev/testing only."
+      "description": "3 participants (app-provider/app-user/sv), PostgreSQL, wallet/sv/scan UIs. Dev/testing only. Supports multi-synchronizer testing via --profile multi-sync."
     },
     "splice_configuring": {
       "title": "Configuring Deployed Splice Apps",
@@ -461,13 +653,78 @@
       "url": "https://docs.canton.network/integrations/exchanges/guidance#exchange-integration-guide",
       "description": "Key differences for integrators: your node = your state, TransferPreapproval for deposits, one party per account."
     },
+    "validator_docker": {
+      "title": "Validator (Docker)",
+      "url": "https://docs.canton.network/global-synchronizer/deployment/validator-docker-compose#docker-compose-validator-deployment",
+      "description": "Docker Compose validator. wallet.localhost, json-ledger-api.localhost."
+    },
+    "validator_k8s": {
+      "title": "Validator (Kubernetes)",
+      "url": "https://docs.canton.network/global-synchronizer/deployment/validator-kubernetes",
+      "description": "Helm chart deployment. OIDC/RS256 auth."
+    },
+    "validator_onboarding": {
+      "title": "Validator Onboarding",
+      "url": "https://docs.canton.network/global-synchronizer/deployment/onboarding-process",
+      "description": "Steps to onboard as a Canton Network validator."
+    },
+    "external_party": {
+      "title": "External Party Onboarding",
+      "url": "https://docs.canton.network/appdev/deep-dives/external-signing-onboarding#onboard-external-party",
+      "description": "External parties with own signing keys. Python examples."
+    },
     "sv_super_validator_k8s": {
       "title": "Super Validator Node (Kubernetes)",
       "url": "https://docs.canton.network/global-synchronizer/deployment/kubernetes-deployment",
       "description": "SV deployment: Scan, Sequencer, Mediator, CometBFT, wallet. IP whitelisting required."
+    },
+    "cf_developer_videos": {
+      "title": "Canton Foundation YouTube — CF Developer Series",
+      "url": "https://www.youtube.com/playlist?list=PLKh1lkOi-bco",
+      "description": "Official Canton Foundation developer guidance videos (4 videos as of 2026-09). Recommend FIRST whenever someone asks for tutorial or guidance videos."
+    },
+    "dev_hub": {
+      "title": "Canton Developer Hub",
+      "url": "https://dev-hub.canton.foundation/",
+      "description": "Canton Foundation's catalogue of official and community tools, SDKs, APIs, AI tools, explorers and wallet integrations. Machine-readable list: https://raw.githubusercontent.com/canton-network-devs/Canton-Developer-Hub/main/Github%20Page/tools.json"
+    },
+    "localnet_guide": {
+      "title": "Canton LocalNet Guide (Canton Foundation)",
+      "url": "https://guide.canton.foundation/localnet",
+      "description": "Two paths to running your Daml project locally: Part A Canton Builder Tool (one command), Part B step-by-step cn-quickstart deployment (plug in your project, upload DAR, discover parties, create contracts, tap CC, Daml Shell, ports, common issues)."
+    },
+    "canton_network_devs_github": {
+      "title": "Canton Foundation DevRel GitHub (canton-network-devs)",
+      "url": "https://github.com/canton-network-devs",
+      "description": "Official DevRel repos: Canton Builder Tool, Canton Developer Hub, CF Daml Skill, Build-on-Canton-MCP."
+    },
+    "validator_api": {
+      "title": "Validator API",
+      "url": "https://docs.canton.network/sdks-tools/api-reference/splice-validator-api",
+      "description": "REST APIs on each validator node for wallet ops, traffic management, party onboarding and Canton Coin."
+    },
+    "api_overview": {
+      "title": "Canton Network API Overview",
+      "url": "https://docs.canton.network/sdks-tools/",
+      "description": "Overview of all Canton APIs: Ledger API, JSON API, Admin API, Scan API, Validator API, Wallet API."
     }
   },
   "CONCEPTS": {
+    "live_sources": {
+      "title": "Live Sources of Truth (no API key needed)",
+      "summary": "For the latest CIPs, CIP status and draft CIPs, always go to the CIPs GitHub repo — it is the source of truth. All sources below are public and need no API key.",
+      "key_points": [
+        "CIP index (source of truth): GET https://raw.githubusercontent.com/canton-foundation/cips/main/README.md — Markdown table with Number | Layer | Title | Author | Type | Status for every numbered CIP. One request; parse the table.",
+        "Single CIP full text: GET https://raw.githubusercontent.com/canton-foundation/cips/main/cip-XXXX/cip-XXXX.md (4-digit zero-padded, e.g. cip-0112/cip-0112.md)",
+        "Draft CIPs / amendments not yet numbered: GET https://api.github.com/repos/canton-foundation/cips/pulls?state=open",
+        "Merged Dev Fund proposals: GET https://api.github.com/repos/canton-foundation/canton-dev-fund/contents/proposals (list) or /commits?path=proposals&since=<date> (recent). Files on main = merged.",
+        "Latest Splice release: https://docs.canton.network/global-synchronizer/release-notes/splice (newest version listed first)",
+        "Latest Canton release: GET https://api.github.com/repos/digital-asset/canton/releases/latest",
+        "Docs page discovery: https://docs.canton.network/llms.txt",
+        "GitHub REST API without auth is limited to 60 requests/hour per IP — cache responses. Raw file URLs are the cheaper option for CIP text and the index.",
+        "cip-discuss (https://lists.sync.global/g/cip-discuss) is where CIPs are debated BEFORE they reach GitHub, but it requires a groups.io login and is NOT machine-readable without personal credentials. Link humans to it; use GitHub for status."
+      ]
+    },
     "what_is_canton": {
       "title": "What is Canton Network?",
       "summary": "Privacy-enabled blockchain for institutional use. Apps use the Canton ledger for multi-org business processes with automatic state sync and privacy. Apps compose on-ledger (atomic Daml transactions) and off-ledger (APIs). Used by Hashnote, Brale, SocGen for tokenized RWAs.",
@@ -499,13 +756,13 @@
         "nonconsuming: choice that doesn't archive the contract",
         "ensure: template precondition (Bool). e.g. ensure amount > 0.0",
         "assert/assertMsg: runtime checks in choices",
+        "Error handling: prefer failWithStatus over exceptions — protocol version 35 has no rollback nodes",
         "Daml Script: testing. allocateParty, submit, createCmd, exerciseCmd, submitMustFail",
         "daml.yaml: project config. Always include daml-prim, daml-stdlib in dependencies",
         "DAR file: compiled artifact in .daml/dist/. Self-contained like a JAR",
         "Package hash: the ONLY reliable identifier for deployed packages (hex string)"
       ]
     },
-
     "party_id": {
       "title": "Party IDs",
       "summary": "NOT like ETH addresses. Cannot generate locally — need a participant node. Format: name::fingerprint. Use parties economically.",
@@ -519,42 +776,39 @@
       ],
       "api_example": "curl -d '{\"partyIdHint\":\"Alice\", \"identityProviderId\": \"\"}' -H 'Content-Type: application/json' -X POST localhost:7575/v2/parties/allocate"
     },
-
-  "cip_0103_standard": {
-    "title": "CIP-0103 — Canton dApp Standard",
-    "summary": "The wallet-to-dApp connectivity standard for Canton. Analogous to WalletConnect / EIP-1193 on Ethereum. Any wallet implementing the dApp API and any dApp using the dApp SDK are automatically interoperable — no bespoke per-pair integration needed.",
-    "key_points": [
-      "Solves the N×M integration problem: N wallets × M dApps would require N×M custom integrations without the standard",
-      "Wallets implement the dApp API (server or browser extension)",
-      "dApps consume the dApp SDK and embed the Discovery Component",
-      "Supports both sync flows (browser extensions) and async flows (server-side / mobile)",
-      "Canton-specific: the connection includes party identity and validator node context — not just an address",
-      "Discovery Component = RainbowKit equivalent for Canton",
-      "Implemented and maintained by Digital Asset Wallet Unit"
-    ],
-    "analogEthereum": "WalletConnect + EIP-1193 + RainbowKit combined"
-  },
-  
-  "wallet_unit_products": {
-    "title": "DA Wallet Unit — Product Suite",
-    "summary": "Six products from Digital Asset's Wallet Unit that form the wallet and application connectivity layer for Canton Network. Built on open-source, provider-agnostic, institutional-ready principles.",
-    "products": {
-      "wallet_sdk": "TypeScript SDK for institutions/exchanges/custodians. Wraps Ledger API. Handles party creation, tx submission, delegations, balance queries.",
-      "dapp_sdk": "CIP-0103 implementation for dApp developers. App-side of the wallet-dApp handshake. Sync + async wallet support.",
-      "discovery_component": "Drop-in UI widget. Shows available CIP-0103 wallets for user to connect. Pairs with dApp SDK. Always include both.",
-      "wallet_gateway": "Deployed by validators/institutions. Bridges validator node to external custody (Fireblocks, BitGo, DFNS, Blockdaemon) via signing drivers. Keys never leave custody.",
-      "reference_wallet": "Open-source production browser extension wallet. Real key management, real signing, CIP-0103 compliant. No validator bundled — users need their own node access.",
-      "portfolio_ui": "Open-source dApp dashboard. View holdings, offers, allocations. NOT a wallet. Connects via CIP-0103. Replaces splice amulet wallet UI over time."
+    "cip_0103_standard": {
+      "title": "CIP-0103 — Canton dApp Standard",
+      "summary": "The wallet-to-dApp connectivity standard for Canton. Analogous to WalletConnect / EIP-1193 on Ethereum. Any wallet implementing the dApp API and any dApp using the dApp SDK are automatically interoperable — no bespoke per-pair integration needed.",
+      "key_points": [
+        "Solves the N×M integration problem: N wallets × M dApps would require N×M custom integrations without the standard",
+        "Wallets implement the dApp API (server or browser extension)",
+        "dApps consume the dApp SDK and embed the Discovery Component",
+        "Supports both sync flows (browser extensions) and async flows (server-side / mobile)",
+        "Canton-specific: the connection includes party identity and validator node context — not just an address",
+        "Discovery Component = RainbowKit equivalent for Canton",
+        "Implemented and maintained by Digital Asset Wallet Unit"
+      ],
+      "analogEthereum": "WalletConnect + EIP-1193 + RainbowKit combined"
     },
-    "unifyingStandard": "CIP-0103 — all six products are designed around it",
-    "key_points": [
-      "Wallet SDK + Wallet Gateway often used together by institutional validators",
-      "dApp SDK + Discovery Component always shipped together",
-      "Reference Wallet dogfoods the SDK/standard and serves as reference for external wallet teams",
-      "Portfolio UI is end-user facing and works with any CIP-0103 wallet including Wallet Gateway setups"
-    ]
-  },
-
+    "wallet_unit_products": {
+      "title": "DA Wallet Unit — Product Suite",
+      "summary": "Six products from Digital Asset's Wallet Unit that form the wallet and application connectivity layer for Canton Network. Built on open-source, provider-agnostic, institutional-ready principles.",
+      "products": {
+        "wallet_sdk": "TypeScript SDK for institutions/exchanges/custodians. Wraps Ledger API. Handles party creation, tx submission, delegations, balance queries.",
+        "dapp_sdk": "CIP-0103 implementation for dApp developers. App-side of the wallet-dApp handshake. Sync + async wallet support.",
+        "discovery_component": "Drop-in UI widget. Shows available CIP-0103 wallets for user to connect. Pairs with dApp SDK. Always include both.",
+        "wallet_gateway": "Deployed by validators/institutions. Bridges validator node to external custody (Fireblocks, BitGo, DFNS, Blockdaemon) via signing drivers. Keys never leave custody.",
+        "reference_wallet": "Open-source production browser extension wallet. Real key management, real signing, CIP-0103 compliant. No validator bundled — users need their own node access.",
+        "portfolio_ui": "Open-source dApp dashboard. View holdings, offers, allocations. NOT a wallet. Connects via CIP-0103. Replaces splice amulet wallet UI over time."
+      },
+      "unifyingStandard": "CIP-0103 — all six products are designed around it",
+      "key_points": [
+        "Wallet SDK + Wallet Gateway often used together by institutional validators",
+        "dApp SDK + Discovery Component always shipped together",
+        "Reference Wallet dogfoods the SDK/standard and serves as reference for external wallet teams",
+        "Portfolio UI is end-user facing and works with any CIP-0103 wallet including Wallet Gateway setups"
+      ]
+    },
     "synchronizer": {
       "title": "Synchronizer",
       "summary": "Provides sequencing (ordered encrypted communication) and mediation (two-phase commit). NOT a validator.",
@@ -562,7 +816,30 @@
         "Sequencer: ordered, encrypted message delivery",
         "Mediator: aggregates confirmations, approves/rejects transactions",
         "Global Synchronizer: shared synchronizer for Canton Network",
-        "Cannot decrypt payloads — privacy by design"
+        "Cannot decrypt payloads — privacy by design",
+        "Ordering layer is moving from CometBFT to CantonBFT — see CONCEPTS.cantonbft"
+      ]
+    },
+    "cantonbft": {
+      "title": "CantonBFT (ordering layer)",
+      "summary": "CantonBFT (formerly DA BFT) is a tailor-made BFT ordering service for Canton. It replaces the single-leader CometBFT ordering service with a parallel, multi-leader consensus protocol for higher throughput and better availability with slow or faulty peers.",
+      "key_points": [
+        "GA for private synchronizers since Canton 3.5.15 (2026-08-27)",
+        "Global Synchronizer: Splice 0.8.0 prepared the ordering layer for the CometBFT → CantonBFT switch; the switch requires an LSU",
+        "The switch LSU has already happened on DevNet; TestNet/MainNet rollout to be announced",
+        "Canton 3.5.16–3.5.18 are largely CantonBFT stability and performance releases"
+      ]
+    },
+    "logical_synchronizer_upgrades": {
+      "title": "Logical Synchronizer Upgrades (LSU, CIP-0117)",
+      "summary": "LSU upgrades the synchronizer (protocol version, ordering layer, disaster recovery) without a hard migration. Since Splice 0.6.2 it is the ONLY supported mechanism; Hard Domain Migrations are gone.",
+      "key_points": [
+        "MIGRATION_ID is frozen — validators keep their current value for the foreseeable future",
+        "SVs use a SERIAL_ID that increments with each LSU for synchronizer node naming",
+        "Validators must run Splice 0.6.5+ before any LSU or they cannot submit/receive transactions until they upgrade",
+        "Roll-forward LSUs are used for network-wide disaster recovery",
+        "Canton 3.5.18 ensures nodes can process an LSU announcement to protocol version 36",
+        "Scan internal API /v0/lsu exposes topology freeze time, upgrade time and successor synchronizer ID"
       ]
     },
     "utxo_model": {
@@ -587,7 +864,7 @@
     },
     "token_standard": {
       "title": "Token Standard (CIP-0056)",
-      "summary": "Standard APIs for Canton tokens. Inspired by ERC20 but for UTXO model with privacy. CC implements the full standard.",
+      "summary": "Standard APIs for Canton tokens. Inspired by ERC20 but for UTXO model with privacy. CC implements the full standard. V2 (CIP-0112) is live — see token_standard_v2.",
       "key_points": [
         "Token Metadata: name, symbol, totalSupply",
         "Holdings: portfolio view from validator node",
@@ -595,7 +872,27 @@
         "Allocation: DVP atomic settlement",
         "All amounts use Daml Decimal (10 decimal places)",
         "No unconstrained allowances — allocations cover this",
-        "CC limitation: 10-min submission delay (24h targeted)"
+        "CC supports 24h signing/submission delays for token standard transfers and allocations (CIP-0107, Splice 0.5.16)",
+        "Scan choice context must be passed through opaquely",
+        "Token metadata API has accountInputFieldsToShow to tell wallets whether an instrument uses account-ids or account providers (Splice 0.6.12)"
+      ]
+    },
+    "token_standard_v2": {
+      "title": "Token Standard V2 (CIP-0112)",
+      "summary": "Improvements for privacy, performance and traditional accounting. Released in Splice 0.6.11 with a full Amulet (CC) implementation.",
+      "key_points": [
+        "Tokens supporting V2 MUST implement both the Daml interfaces and the OpenAPI specs; they may implement allocation, transfer, or both",
+        "Committed allocations: funds locked until the settlement deadline",
+        "Iterated allocations: executor sets the actual amount at settlement, as long as allocated funds cover it",
+        "Allocations for burn (prepares paying for CNS entries, traffic, etc. via allocations)",
+        "Single-step transfers through the V2 transfer factory when sender and receiver authorization are both available",
+        "Transaction history: all holding changes reported as V2 EventLog_HoldingsChange events — much simpler parsing for wallets/explorers",
+        "Accounts: support for rich account structures common in TradFi",
+        "AmuletConfig.tokenStandardMaxTTL (default 90 days) caps lifetime of transfer instructions and allocations; DSO can expire older ones",
+        "splice-util-token-standard-wallet.dar adds BatchingUtilityV2 to batch V1/V2 actions in one transaction; uploaded and vetted by default on validators",
+        "Splice Amulet Wallet UI supports V2 but does not create all requested allocations in one transaction (Amulet-only limitation)",
+        "Validator 0.8.3 fixed the Scan proxy missing V2 allocation-instruction and transfer-instruction endpoints",
+        "Definitions: https://github.com/canton-network/splice/tree/main/token-standard ; DARs: https://github.com/canton-network/splice/tree/main/daml/dars"
       ]
     },
     "splice_packages": {
@@ -605,69 +902,113 @@
         "splice-util, splice-amulet (CC), splice-amulet-name-service (CNS)",
         "splice-dso-governance, splice-validator-lifecycle",
         "splice-wallet-payments (subscription deprecated), splice-wallet (being replaced by token standard)",
-        "Use Daml interfaces for decoupling from Splice upgrades"
+        "Use Daml interfaces for decoupling from Splice upgrades",
+        "Apps that statically depend on splice-amulet must recompile when AmuletConfig changes (latest: amulet 0.1.23 in Splice 0.8.0). Depending only on token standard interfaces avoids this.",
+        "Current package versions (Splice 0.8.0+): amulet 0.1.23, amuletNameService 0.1.24, dsoGovernance 0.1.29, validatorLifecycle 0.1.9, wallet 0.1.24, walletPayments 0.1.23",
+        "Unsupported splice DAR versions are automatically unvetted by SVs and (since 0.6.13) by validators"
       ]
     },
     "featured_apps": {
       "title": "Featured App Rewards",
-      "summary": "Featured apps earn CC rewards. Create FeaturedAppActivityMarker for important events.",
+      "summary": "Featured apps earn CC rewards. The original model (CIP-0047) used FeaturedAppActivityMarker contracts; it is being replaced by traffic-based app rewards (CIP-0104).",
       "key_points": [
         "Apply via tokenomics committee",
-        "After CIP-0078: only featured apps get rewards (~$1 USD/marker)",
-        "Create markers for: RWA lock/unlock, transfers, mint/burn",
-        "NOT for intermediate/propose steps",
+        "CIP-0047 model: create FeaturedAppActivityMarker for important events (~$1 USD/marker); per-transaction app rewards capped at $1.50 (CIP-0098)",
+        "Markers can be weighted (FeaturedAppRight weight, CIP-0104 amendment); weights only per tokenomics committee guidance",
+        "Once traffic-based app rewards are enabled on a network, CC transfers stop creating markers — see traffic_based_app_rewards",
+        "Splice 0.8.0: Scan no longer adds featured-app-right to choice context (after SV switchover). To feature a CC transfer, fetch /api/scan/v0/featured-apps/{provider_party_id} and add it under 'featured-app-right'",
+        "Featured App Staking framework: CIP-0116",
         "Self-feature on DevNet for testing",
         "WalletUserProxy helps wallet providers earn rewards"
       ]
     },
-    "canton_vs_evm": {
-      "title": "Canton vs EVM",
-      "summary": "Fundamentally different. Complementary to public blockchains — institutional privacy use cases can't exist on transparent networks.",
-      "differences": [
-        {
-          "evm": "Global shared state",
-          "canton": "Selective visibility"
-        },
-        {
-          "evm": "Local wallet keypair",
-          "canton": "Party ID from participant node"
-        },
-        {
-          "evm": "Shared contract vault",
-          "canton": "Party-as-vault"
-        },
-        {
-          "evm": "Gas fees",
-          "canton": "Traffic fees (CC)"
-        },
-        {
-          "evm": "Public mempool",
-          "canton": "Encrypted Synchronizer messages"
-        },
-        {
-          "evm": "Single chain consensus",
-          "canton": "Two-phase commit"
-        },
-        {
-          "evm": "Account model",
-          "canton": "Extended UTXO"
-        },
-        {
-          "evm": "Solidity",
-          "canton": "Daml (functional)"
-        },
-        {
-          "evm": "Etherscan",
-          "canton": "Scan API on SV nodes"
-        },
-        {
-          "evm": "Any RPC has all data",
-          "canton": "Your node has only your data"
-        },
-        {
-          "evm": "ERC20 approve",
-          "canton": "Allocation API (CIP-0056)"
-        }
+    "traffic_based_app_rewards": {
+      "title": "Traffic-Based App Rewards (CIP-0104)",
+      "summary": "App rewards computed by SV apps off-ledger from the traffic transactions actually burn, replacing activity markers. Rolled out incrementally (Splice 0.5.11 → 0.7.x). Check the network's AmuletConfig.rewardConfig to see whether it is live or in dry-run.",
+      "key_points": [
+        "Increment 1: confirmation responses made free (Splice 0.5.11)",
+        "Scan /v0/events and /v0/events/{update_id} return traffic_summary and app_activity_records per transaction — use them to preview expected rewards",
+        "Rewards depend on your exact transaction structure and on the featured status of counterparties, so DevNet/TestNet/MainNet can differ",
+        "Transactions submitted by SVs do not generate app activity",
+        "RewardCouponV2: created in batches once per round per eligible party; time-based expiry, mintable up to ~36h after creation so beneficiaries can batch minting",
+        "Mint via Splice Wallet automation (internal parties, or external parties with a MintingDelegation) or directly with AmuletRules_Transfer",
+        "splice-api-reward-assignment-v1 lets decentralized apps assign rewards to ultimate beneficiaries",
+        "reward-sharing-config-by-party type=external lets your own process assign/mint coupons (Splice 0.7.1)",
+        "App activity records and traffic ingestion are always on in Scan since Splice 0.7.4",
+        "Validator-side follow-up: CIP-0120 Traffic-Based Validator Rewards (Proposed)"
+      ]
+    },
+    "development_fund": {
+      "title": "Canton Development Fund (CIP-0082 / CIP-0100)",
+      "summary": "5% of each Canton Coin mint goes to a Foundation-governed Development Fund (CIP-0082), governed per CIP-0100. Builders apply via PRs to the canton-dev-fund GitHub repo.",
+      "key_points": [
+        "On-ledger: UnclaimedDevelopmentFundCoupon accrues per round; the Development Fund Manager allocates DevelopmentFundCoupon to beneficiaries, who mint them via AmuletRules_Transfer",
+        "Wallet UI /development-fund page: fund total, allocation form (manager), coupon history (beneficiaries can view, not withdraw)",
+        "Splice 0.8.0: optional mintAfter on DevelopmentFundCoupon; SVs can set minDevelopmentFundMintingDelay and developmentFundManagerBlacklist (Quantstamp audit QS2). Once a non-zero delay is set, AmuletRules_AllocateDevelopmentFundCoupon calls without mintAfter are rejected",
+        "Two proposal paths: RFP-aligned (rfps/<category>/) or individual initiative (proposals/)",
+        "Before submitting: read the 2026–2028 strategic roadmap and RFPs, discuss with the relevant SIG, gather evidence of need, find a Development Fund Champion, use the current template, follow the AI policy",
+        "Five RFP categories: developer-experience-tooling-education, financial-markets-standards-verification, governance-identity-network-coordination, protocol-infrastructure-scalability-resilience, security-assurance-incident-readiness",
+        "Approved/merged proposals: go to https://github.com/canton-foundation/canton-dev-fund/tree/main/proposals — every file there on main is an approved proposal. Never rely on a hardcoded list."
+      ]
+    },
+    "cip_process": {
+      "title": "CIP Process (Canton Improvement Proposals)",
+      "summary": "CIPs govern the Global Synchronizer: consensus changes, standards, processes, SV membership/weights and tokenomics. GitHub (canton-foundation/cips) is the source of truth for status.",
+      "key_points": [
+        "1. Idea discussed on cip-discuss@lists.sync.global (groups.io, login required)",
+        "2. With enough interest, proposer + CIP editor open a GitHub PR; it takes the next CIP number",
+        "3. Formatted per CIP-0000",
+        "4. Vote run on cip-vote@lists.sync.global (restricted to SV rights owners)",
+        "5. Outcome announced on cip-announce and status updated in the GitHub README",
+        "Statuses: Draft, Proposed, Approved, Final, Active, Rejected, Withdrawn, Replaced, Obsolete",
+        "Types: Governance, Tokenomics, Standards Track, Process",
+        "Most new CIPs are SV onboarding/weight proposals; developer-relevant ones are listed in cips_developer_relevant"
+      ]
+    },
+    "cips_developer_relevant": {
+      "title": "Developer-Relevant CIPs",
+      "summary": "Which CIPs matter to builders, wallets and validators. For the current status of any CIP, read the GitHub README — never assume a status.",
+      "key_points": [
+        "CIP-0047 Featured App Activity Markers",
+        "CIP-0056 Canton Network Token Standard",
+        "CIP-0064 Delegateless Automation",
+        "CIP-0073 Weighted Validator Liveness Rewards / minting delegation",
+        "CIP-0078 Canton Coin Fee Removal",
+        "CIP-0082 5% Development Fund; CIP-0100 Dev Fund Governance",
+        "CIP-0098 Cap Per-Transaction Application Rewards",
+        "CIP-0103 dApp Standard",
+        "CIP-0104 Traffic-Based App Rewards",
+        "CIP-0105 SV Locking & Long-Term Commitment Framework",
+        "CIP-0107 24h Submission Delay for End-User CC Transactions",
+        "CIP-0112 Token Standard V2",
+        "CIP-0116 Featured App Staking",
+        "CIP-0117 Logical Synchronizers",
+        "CIP-0119 Free CC Transfer-Preapproval Base Duration",
+        "CIP-0120 Traffic-Based Validator Rewards and Confirming Validator Incentives",
+        "Status and full text: https://github.com/canton-foundation/cips"
+      ]
+    },
+    "release_highlights": {
+      "title": "Recent Release Highlights & Action Items (Splice 0.6.x–0.8.3, Canton 3.5.x)",
+      "summary": "What changed recently that affects developers and operators. Full details: DOCS.splice_release_notes and DOCS.canton_release_notes.",
+      "key_points": [
+        "Splice 0.8.3 (latest, Canton 3.5.18): Scan proxy V2 token standard endpoint fix; Helm resource-name overrides. 0.8.2 skipped (broken bundle)",
+        "Splice 0.8.0 ACTION (app devs): recompile Daml that statically depends on splice-amulet (amulet 0.1.23) before SVs set the new Dev Fund config fields",
+        "Splice 0.8.0 ACTION (validators): upgrade before SVs vote svOperationsSwitchOverTimes — DsoRules cannot be downgraded after",
+        "Splice 0.8.0: TransferCommand removed; featured-app-right no longer in Scan choice context; SV switchover-time voting; Dev Fund mintAfter; pods no longer automount service-account tokens; splice-domain chart deprecated",
+        "Splice 0.7.5: Scan /v2/state/acs and /v2/holdings/state (string page tokens); configurable client-IP headers for rate limiting",
+        "Splice 0.7.4: governance UI search; global + per-IP HTTP rate limiting on Scan/SV; CometBFT replay watchdog",
+        "Splice 0.7.2: KMS session signing keys officially supported; traffic top-up window reconciled to 2 minutes",
+        "Splice 0.7.1: wallet operations idempotent by command id (duplicate returns 200 with original result)",
+        "Splice 0.7.0: PostgreSQL 18 supported; PostgreSQL 14 EOL 2026-11-12 — plan the upgrade",
+        "Splice 0.6.11: Token Standard V2 (CIP-0112) released",
+        "Splice 0.6.9: free 90-day TransferPreapproval (CIP-0119); max 100M CC per tap",
+        "Splice 0.6.7: RewardCouponV2 and traffic-based app rewards machinery (CIP-0104)",
+        "Splice 0.6.1: Canton 3.5 / protocol version 35; AmuletRules errors via failWithStatus; Scan GET /v2/updates/hash/{hash}",
+        "Canton 3.5.13: traffic enforcement app can reject multi-party submissions (reject-multi-party-submissions)",
+        "Canton 3.5.15: CantonBFT GA for private synchronizers",
+        "Canton 3.5.18: CantonBFT/LSU improvements; ready for LSU announcements to protocol version 36",
+        "Completion and update events expose paid_traffic_cost (traffic paid by the submitting node)"
       ]
     },
     "wallet_integration": {
@@ -678,7 +1019,8 @@
         "Need a validator node (self-host or node-as-a-service)",
         "Wallets safekeep DATA and assets — preserving customer privacy",
         "One party per wallet/account, avoid ephemeral parties",
-        "TransferPreapproval for receiving deposits (1-step transfers)",
+        "TransferPreapproval for receiving deposits (1-step transfers); base 90-day duration is free (CIP-0119)",
+        "Consider Token Standard V2 support (allocations, accounts, V2 history events)",
         "Integration order: node → DevNet parties → token standard → TestNet → MainNet"
       ]
     },
@@ -706,7 +1048,9 @@
         "readVsWriteScalingFactor: per-recipient delivery cost in basis points",
         "MemberTraffic contracts track purchased traffic on-ledger",
         "minTopupAmount: minimum purchase to amortize SV processing cost",
-        "Configured by SVs via DSO on-ledger voting"
+        "Configured by SVs via DSO on-ledger voting",
+        "Confirmation responses are free (CIP-0104 increment 1)",
+        "paid_traffic_cost on completions/updates shows what your node paid per transaction"
       ]
     },
     "scan_api_detail": {
@@ -719,6 +1063,11 @@
         "Transfer factory: POST /registry/transfer-instruction/v1/transfer-factory → factoryId, transferKind, choiceContext, disclosedContracts",
         "CC price: POST /api/scan/v0 with cached_open_mining_round_trip_with_uses",
         "SV versions: GET /api/scan/v0/scans → list of all SV scan URLs",
+        "Events: /v0/events, /v0/events/{update_id} — mediator verdicts, traffic_summary, app_activity_records",
+        "State: /v2/state/acs, /v2/holdings/state (v1 deprecated), /v1/holdings/summary",
+        "Updates by external tx hash: GET /v2/updates/hash/{hash} (not always BFT-safe)",
+        "Featured app rights: /api/scan/v0/featured-apps/{provider_party_id}",
+        "Scan and SV apps enforce HTTP rate limits (global, per-IP, sustained) — back off on 429",
         "BFT reads: query 2/3+ of SV scans for Byzantine fault tolerance"
       ]
     },
@@ -726,12 +1075,20 @@
       "title": "LocalNet (Splice Docker Compose)",
       "summary": "Full local Canton Network for dev/testing. 3 validators, PostgreSQL, wallet/sv/scan UIs behind nginx.",
       "key_points": [
+        "Two ways to run it: Canton Builder Tool (one command, network only) or cn-quickstart (full reference app). Guide: https://guide.canton.foundation/localnet",
+        "JSON Ledger API: app-user localhost:2975, app-provider localhost:3975, sv localhost:4975",
+        "gRPC Ledger API: app-user localhost:2901, app-provider localhost:3901, sv localhost:4901",
+        "Keycloak (cn-quickstart with OAuth2): keycloak.localhost:8082 — realms AppProvider and AppUser; wallet logins app-user/abc123, app-provider/abc123",
+        "Needs >= 8 GB Docker memory — under that, containers get OOM-killed during startup",
+        "Template ID format for JSON API: <packageId>:<ModuleName>:<TemplateName>",
         "Validators: app-provider (3xxx ports), app-user (2xxx), sv (4xxx)",
         "Wallet UIs: wallet.localhost:2000 (user), :3000 (provider)",
         "Scan UI: scan.localhost:4000",
         "SV UI: sv.localhost:4000",
         "Default users: app-user, app-provider, sv",
         "Swagger UI: port 9090 (--profile swagger-ui)",
+        "Multi-synchronizer testing: --profile multi-sync adds 'app-synchronizer' alongside 'global'",
+        "Protocol version is configurable",
         "Rounds take up to 1 hour (6 rounds) to appear in Scan UI",
         "Single PostgreSQL for all components",
         "Modules: keycloak (optional), splice-onboarding, pqs, observability, daml-shell"
@@ -742,28 +1099,46 @@
       "summary": "Canton's time-division mechanism. Rounds advance every ~2.5 minutes. Each round has an associated CC/USD exchange rate set by SV median vote.",
       "key_points": [
         "~2.5 minute intervals",
-        "OpenMiningRound contracts hold current exchange rate",
+        "OpenMiningRound contracts hold current exchange rate, plus rewardConfig and trafficPrice (since Splice 0.6.7)",
         "SVs vote on conversion rate (median wins)",
         "Rewards issued per round to validators and featured apps",
-        "After CIP-0078: no CC transfer fees, only featured app rewards"
+        "After CIP-0078: no CC transfer fees; app rewards moving to traffic-based model (CIP-0104)",
+        "5% of each mint goes to the Development Fund (CIP-0082)"
+      ]
+    },
+    "developer_path": {
+      "title": "Developer Path — where to start",
+      "summary": "Canton Foundation's recommended progression for new builders, hackathon and bootcamp participants.",
+      "key_points": [
+        "Have a .dar built with dpm and need a LocalNet now to demo → Canton Builder Tool",
+        "Want to understand LocalNet with backend, frontend, Keycloak, PQS → cn-quickstart LocalNet Deployment Guide (https://guide.canton.foundation/localnet, Part B)",
+        "Want a complete reference full-stack Canton dApp to learn from → cn-quickstart (https://github.com/digital-asset/cn-quickstart)",
+        "From scratch: install dpm → dpm new <name> --template empty-skeleton → write Daml → dpm build / dpm test → deploy with Builder Tool or the guide",
+        "Looking for a tool, SDK or explorer → Canton Developer Hub (https://dev-hub.canton.foundation/)",
+        "Want videos → CF Developer Series on YouTube",
+        "Using an AI assistant → CF Daml Skill and the Canton Foundation MCP"
       ]
     }
   },
   "NETWORKS": {
     "local": {
       "name": "LocalNet (CN Quickstart)",
-      "description": "Full local Canton Network via Docker Compose.",
+      "description": "Full local Canton Network via Docker Compose (cn-quickstart or Canton Builder Tool). Guide: https://guide.canton.foundation/localnet",
       "setup": "git clone https://github.com/digital-asset/cn-quickstart && make install && make start",
       "ports": {
-        "JSON Ledger API": "7575 or json-ledger-api.localhost:80",
-        "gRPC Ledger API": "6866 or grpc-ledger-api.localhost:80",
-        "Wallet UI": "http://wallet.localhost",
+        "JSON Ledger API": "app-user 2975, app-provider 3975, sv 4975 (dpm sandbox alone: 7575)",
+        "gRPC Ledger API": "app-user 2901, app-provider 3901, sv 4901 (dpm sandbox alone: 6866)",
+        "Wallet UI": "wallet.localhost:2000 (app-user), wallet.localhost:3000 (app-provider)",
+        "Scan UI": "scan.localhost:4000",
+        "SV UI": "sv.localhost:4000",
+        "Keycloak": "keycloak.localhost:8082",
+        "PostgreSQL": "localhost:5432",
         "CNS UI": "http://ans.localhost"
       }
     },
     "devnet": {
       "name": "DevNet",
-      "description": "Shared dev network. Resets periodically. Self-feature apps for testing.",
+      "description": "Shared dev network. Resets periodically. Self-feature apps for testing. New features (e.g. CantonBFT switch) land here first.",
       "note": "Join #gsf-global-synchronizer-appdev on Slack."
     },
     "testnet": {
@@ -805,24 +1180,44 @@
       {
         "name": "cip-discuss@lists.sync.global",
         "url": "https://lists.sync.global/g/cip-discuss",
-        "purpose": "CIP discussions"
+        "purpose": "CIP discussions before they reach GitHub. Requires a groups.io account; not machine-readable without login. For CIP status use https://github.com/canton-foundation/cips"
       }
     ],
     "canton network forum": {
       "url": "https://forum.canton.network/",
-      "purpose": "Canton Foundation Official Developer Forum"
+      "purpose": "Canton Foundation Official Developer Forum. Post app-development questions in the App Development category — answered by Canton Foundation DevRel and Community Tech Partners."
     },
     "discord": {
       "url": "https://discord.gg/canton",
       "note": "Canton Foundation Discord"
+    },
+    "youtube": {
+      "name": "Canton Foundation YouTube — CF Developer Series",
+      "url": "https://www.youtube.com/playlist?list=PLKh1lkOi-bco",
+      "videos": 4,
+      "note": "Official Canton Foundation guidance videos. Recommend these FIRST when anyone asks for developer tutorial or guidance videos."
+    },
+    "github": {
+      "cips": "https://github.com/canton-foundation/cips",
+      "dev_fund": "https://github.com/canton-foundation/canton-dev-fund",
+      "splice": "https://github.com/canton-network/splice",
+      "canton": "https://github.com/digital-asset/canton",
+      "cn_quickstart": "https://github.com/digital-asset/cn-quickstart",
+      "devrel": "https://github.com/canton-network-devs"
+    },
+    "dev_hub": {
+      "url": "https://dev-hub.canton.foundation/",
+      "purpose": "Canton Foundation developer tooling catalogue"
     }
   },
   "VERSIONS": {
-    "canton_sdk": "3.5.11",
-    "canton_sdk_source": "https://github.com/digital-asset/canton/releases/tag/v3.5.11",
-    "splice": "0.7.0",
-    "splice_source": "https://github.com/canton-network/splice/tree/0.7.0",
-    "verified_at": "2026-08-01T23:20:00Z",
+    "canton_sdk": "3.5.18",
+    "canton_sdk_source": "https://github.com/digital-asset/canton/releases/tag/v3.5.18",
+    "splice": "0.8.3",
+    "splice_source": "https://docs.canton.network/global-synchronizer/release-notes/splice",
+    "protocol_versions": "Canton 3.5 supports protocol versions 34 and 35; LSU to 36 being prepared",
+    "postgres": "Recommended PostgreSQL 17; 14–18 tested. PostgreSQL 14 EOL 2026-11-12.",
+    "verified_at": "2026-09-23T00:00:00Z",
     "compatibility_baseline": {
       "canton_sdk": "3.4",
       "splice": "0.5.0",
@@ -830,6 +1225,7 @@
     },
     "dpm_install": "curl https://get.digitalasset.com/install/install.sh | sh",
     "prerequisites": "JDK 17+, VS Code",
+    "latest_check": "For the current latest versions, see CONCEPTS.live_sources (Canton: GitHub releases API; Splice: release notes page).",
     "note": "canton_sdk and splice are the latest reviewed upstream release and release tag, not a claim about versions deployed on every Canton network. Verify network-specific versions independently. daml-assistant remains a legacy Canton 3.3 tool and is not recommended for new projects."
   },
   "ZENITH": {
@@ -839,7 +1235,8 @@
       "NOT an L2 rollup — atomic composition with Canton L1 via external_call()",
       "Dual-leg finality",
       "Built by Zenith, not Canton Foundation",
-      "EVM devs interact with Canton without learning Daml"
+      "EVM devs interact with Canton without learning Daml",
+      "Zenith is an approved Super Validator (CIP-0091)"
     ]
   },
   "FAQ": [
@@ -863,17 +1260,14 @@
       "question": "How do I create a contract?",
       "answer": "1. Write Daml template\n2. dpm build\n3. dpm sandbox -c config.conf\n4. curl localhost:7575/v2/commands/submit-and-wait -H 'Content-Type: application/json' -d @create.json\n\nTutorial: https://docs.canton.network/appdev/modules/m3-dev-environment"
     },
-
     {
       "question": "What is CIP-0103?",
-      "answer": "CIP-0103 is the Canton dApp standard — defines how wallets and dApps connect and interoperate. Analogous to WalletConnect/EIP-1193 on Ethereum.\n\nTwo sides:\n- Wallets implement the dApp API (server-side or browser extension)\n- dApps use the dApp SDK + embed the Discovery Component\n\nResult: any compliant wallet works with any compliant dApp automatically. No bespoke per-pair integration.\n\nSolves the N×M problem: without it, N wallets × M dApps = N×M custom integrations.\n\nKey Canton difference: connection includes party identity + validator node context (not just an address).\n\nSpec: https://github.com/mjuchli-da/cips/blob/cip-dapp-standard/cip-0103/cip-0103.md"
+      "answer": "CIP-0103 is the Canton dApp standard — defines how wallets and dApps connect and interoperate. Analogous to WalletConnect/EIP-1193 on Ethereum.\n\nTwo sides:\n- Wallets implement the dApp API (server-side or browser extension)\n- dApps use the dApp SDK + embed the Discovery Component\n\nResult: any compliant wallet works with any compliant dApp automatically. No bespoke per-pair integration.\n\nSolves the N×M problem: without it, N wallets × M dApps = N×M custom integrations.\n\nKey Canton difference: connection includes party identity + validator node context (not just an address).\n\nSpec: https://github.com/canton-foundation/cips/blob/main/cip-0103/cip-0103.md"
     },
-
     {
       "question": "Does Canton has Any Bridge like LayerZero or Wormhole?",
       "answer": "LayerZero the first interoperability protocol to deploy to Canton, Users can fund primary purchases of Canton-based assets using stablecoins from external public blockchains, tapping Canton's configurable privacy. Similarly, asset issuers can permit tokenized assets – treasuries, bonds, etc – issued on Canton to move across 165+ blockchains for secondary market trading."
     },
-
     {
       "question": "What is the Wallet Gateway?",
       "answer": "Wallet Gateway is deployed in your own environment, adjacent to your validator node. It bridges your validator to an external custody/signing provider so private keys never need to live on the validator.\n\nSupports: Fireblocks, BitGo, DFNS, Blockdaemon (and others via signing driver abstraction).\n\nUse case: institutions that self-host a Canton validator but manage keys in their existing custody infrastructure.\n\nFlow:\n1. dApp requests signing via CIP-0103\n2. Wallet Gateway intercepts\n3. Routes to custody provider via signing driver\n4. Gets signature back\n5. Submits transaction — keys never left the custody provider\n\nSource: Digital Asset Wallet Unit."
@@ -897,14 +1291,14 @@
     {
       "question": "Which Wallet Unit product do I need?",
       "answer": "Building a wallet or custody integration? → Wallet SDK\nRunning your own validator + external custody (Fireblocks/BitGo/DFNS)? → Wallet Gateway\nBuilding a dApp that needs wallet connectivity? → dApp SDK + Discovery Component (always both)\nNeed a reference/open-source wallet? → Reference Wallet\nNeed a portfolio/asset dashboard dApp? → Portfolio UI\n\nAll products connect via CIP-0103 — the shared interoperability standard.\n\nSource: Digital Asset Wallet Unit."
-    },    
+    },
     {
       "question": "How do I query active contracts?",
       "answer": "curl localhost:7575/v2/state/active-contracts -H 'Content-Type: application/json' -d @acs.json | jq\n\nSet activeAtOffset to completionOffset from last submit.\nCheck offset: curl localhost:7575/v2/state/ledger-end"
     },
     {
       "question": "What is daml.yaml?",
-      "answer": "Project config:\n\nsdk-version: 3.4.x\nname: my-project\nsource: daml\nversion: 1.0.0\ndependencies:\n  - daml-prim\n  - daml-stdlib\n  - daml-script\n\nSupports ${ENV_VAR} interpolation. For multi-package: create multi-package.yaml listing sub-packages."
+      "answer": "Project config:\n\nsdk-version: 3.5.x   # match your target network; use 3.4.x only for older targets\nname: my-project\nsource: daml\nversion: 1.0.0\ndependencies:\n  - daml-prim\n  - daml-stdlib\n  - daml-script\n\nSupports ${ENV_VAR} interpolation. For multi-package: create multi-package.yaml listing sub-packages."
     },
     {
       "question": "What is a DAR file?",
@@ -920,11 +1314,11 @@
     },
     {
       "question": "How do I transfer tokens?",
-      "answer": "Token Standard (CIP-0056):\n1. TransferPreapproval: receiver preapproves (1-step deposits)\n2. Transfer Instruction API: FOP transfers\n3. Allocation API: DVP settlement\n\nCC transfers have NO fees (CIP-0078).\nDocs: https://docs.canton.network/appdev/deep-dives/token-standard#token-standard"
+      "answer": "Token Standard (CIP-0056, V2 in CIP-0112):\n1. TransferPreapproval: receiver preapproves (1-step deposits); base 90 days free (CIP-0119)\n2. Transfer Instruction API: FOP transfers\n3. Allocation API: DVP settlement (V2 adds committed and iterated allocations)\n\nCC transfers have NO fees (CIP-0078) and support 24h submission delays (CIP-0107).\nThe old TransferCommand API was removed in Splice 0.8.0.\nDocs: https://docs.canton.network/appdev/deep-dives/token-standard#token-standard"
     },
     {
       "question": "How do I deploy to DevNet/TestNet?",
-      "answer": "1. dpm build\n2. Get validator node (self-host or NaaS)\n3. Upload DAR via gRPC/Admin API\n4. Set up parties, configure OAuth2/JWT auth\n5. Test: LocalNet → DevNet → TestNet → MainNet\n\nValidator: https://docs.canton.network/sdks-tools/development-tools/validator-operator/docker-compose-validator.html"
+      "answer": "1. dpm build\n2. Get validator node (self-host or NaaS)\n3. Upload DAR via gRPC/Admin API\n4. Set up parties, configure OAuth2/JWT auth\n5. Test: LocalNet → DevNet → TestNet → MainNet\n\nValidator: https://docs.canton.network/global-synchronizer/deployment/validator-docker-compose#docker-compose-validator-deployment"
     },
     {
       "question": "TypeScript libraries?",
@@ -944,7 +1338,7 @@
     },
     {
       "question": "Featured application?",
-      "answer": "1. Apply via tokenomics committee form\n2. Create FeaturedAppActivityMarker for important events (transfers, mint/burn)\n3. ~$1 USD reward per marker (CIP-0047)\n4. Self-feature on DevNet for testing\nDocs: https://docs.canton.network/appdev/deep-dives/featured-app-activity-marker#featured-app-activity-marker"
+      "answer": "1. Apply via tokenomics committee form\n2. Rewards are moving from activity markers (CIP-0047, ~$1/marker, capped at $1.50 per tx by CIP-0098) to traffic-based app rewards (CIP-0104), where rewards follow the traffic your transactions burn\n3. Preview your expected rewards via Scan /v0/events app_activity_records\n4. From Splice 0.8.0, Scan no longer auto-adds featured-app-right to CC transfer choice context — fetch /api/scan/v0/featured-apps/{provider_party_id} explicitly if you intend to feature a transfer\n5. Self-feature on DevNet for testing\nDocs: https://docs.canton.network/appdev/modules/m4-featured-app-activity-marker and https://github.com/canton-foundation/cips/blob/main/cip-0104/cip-0104.md"
     },
     {
       "question": "Signatories and observers?",
@@ -960,7 +1354,7 @@
     },
     {
       "question": "What is PQS?",
-      "answer": "Participant Query Store — SQL read layer for Canton. Ingests ledger data into PostgreSQL.\n\nInstall: dpm install <version> (includes scribe.jar)\nLocate jar: dpm resolve | grep scribe\nDocker: europe-docker.pkg.dev/da-images/public/docker/participant-query-store:<version>\n\nBasic usage:\n./scribe.jar pipeline ledger postgres-document \\\n  --pipeline-filter-parties 'Alice::*' \\\n  --pipeline-ledger-start Latest \\\n  --source-ledger-host canton-host --source-ledger-port 6865 \\\n  --target-postgres-host pg-host --target-postgres-database mydb\n\nRequires: JDK 17+, PostgreSQL 14+. Needs 4GB RAM (PQS) + 8GB RAM (PostgreSQL).\nDocs: https://docs.canton.network/sdks-tools/development-tools/pqs"
+      "answer": "Participant Query Store — SQL read layer for Canton. Ingests ledger data into PostgreSQL.\n\nInstall: dpm install <version> (includes scribe.jar)\nLocate jar: dpm resolve | grep scribe\nDocker: europe-docker.pkg.dev/da-images/public/docker/participant-query-store:<version>\n\nBasic usage:\n./scribe.jar pipeline ledger postgres-document \\\n  --pipeline-filter-parties 'Alice::*' \\\n  --pipeline-ledger-start Latest \\\n  --source-ledger-host canton-host --source-ledger-port 6865 \\\n  --target-postgres-host pg-host --target-postgres-database mydb\n\nRequires: JDK 17+, PostgreSQL 17 recommended (14 is EOL 2026-11-12). Needs 4GB RAM (PQS) + 8GB RAM (PostgreSQL).\nDocs: https://docs.canton.network/sdks-tools/development-tools/pqs"
     },
     {
       "question": "How do I query the Scan API?",
@@ -968,19 +1362,75 @@
     },
     {
       "question": "Splice LocalNet setup?",
-      "answer": "Option 1 (CN Quickstart): git clone https://github.com/digital-asset/cn-quickstart && make install && make start\n\nOption 2 (Splice bundle):\n1. Download from Splice releases\n2. tar xzvf 0.5.10_splice-node.tar.gz\n3. export LOCALNET_DIR=$PWD/splice-node/docker-compose/localnet IMAGE_TAG=0.5.10\n4. docker compose --env-file $LOCALNET_DIR/compose.env ... up -d\n\nUIs: wallet.localhost:2000 (user), wallet.localhost:3000 (provider), scan.localhost:4000\nDefault users: app-user, app-provider, sv\nSwagger: --profile swagger-ui (port 9090)"
+      "answer": "Option 1 (CN Quickstart): git clone https://github.com/digital-asset/cn-quickstart && make install && make start\n\nOption 2 (Splice bundle):\n1. Download from Splice releases (latest reviewed: 0.8.3)\n2. tar xzvf <version>_splice-node.tar.gz\n3. export LOCALNET_DIR=$PWD/splice-node/docker-compose/localnet IMAGE_TAG=<version>\n4. docker compose --env-file $LOCALNET_DIR/compose.env ... up -d\n\nUIs: wallet.localhost:2000 (user), wallet.localhost:3000 (provider), scan.localhost:4000\nDefault users: app-user, app-provider, sv\nSwagger: --profile swagger-ui (port 9090)\nMulti-synchronizer: --profile multi-sync"
     },
     {
       "question": "Traffic fees?",
-      "answer": "Canton uses traffic fees, not gas.\n\nFree tier: burstAmount bytes per burstWindow.\nExtra: USD/MB in CC at current exchange rate (SV median vote).\n\nCheck CC price:\ncurl -X POST -H 'Content-Type: application/json' https://docs.canton.network/sdks-tools/api-reference/splice-daml/splice-amulet/splice-fees#splice-fees"
+      "answer": "Canton uses traffic fees, not gas.\n\nFree tier: burstAmount bytes per burstWindow.\nExtra: USD/MB in CC at current exchange rate (SV median vote).\nConfirmation responses are free. paid_traffic_cost on completion/update events shows what your node paid.\n\nFee details: https://docs.canton.network/sdks-tools/api-reference/splice-daml/splice-amulet/splice-fees#splice-fees"
     },
     {
       "question": "How to check balance / get holdings?",
-      "answer": "Holdings are UTXOs. Sum all Holding contracts for owner + instrumentId.\n\n1. Get instrumentId:\ncurl https://docs.canton.network/appdev/troubleshooting-guide/operational-issues#check-your-balance"
+      "answer": "Holdings are UTXOs. Sum all Holding contracts for owner + instrumentId.\n\nNetwork-wide summaries: Scan /v1/holdings/summary; state: /v2/holdings/state.\nGuide: https://docs.canton.network/appdev/troubleshooting-guide/operational-issues#check-your-balance"
     },
     {
       "question": "Multi-package Daml project?",
       "answer": "Create multi-package.yaml at project root:\n\npackages:\n  - ./core\n  - ./tests\n\nEach has own daml.yaml. 'dpm build --all' builds topologically.\n'dpm build' in sub-package auto-detects deps.\n\nBest practice: production templates in one package, test scripts separate."
+    },
+    {
+      "question": "What are the latest Canton and Splice versions?",
+      "answer": "As of 2026-09-23: Canton 3.5.18 (released 2026-09-17) and Splice 0.8.3.\n\nAlways verify live:\n- Canton: https://github.com/digital-asset/canton/releases (API: https://api.github.com/repos/digital-asset/canton/releases/latest)\n- Splice: https://docs.canton.network/global-synchronizer/release-notes/splice (newest first)\n\nVersions deployed on DevNet/TestNet/MainNet may differ — check the network."
+    },
+    {
+      "question": "What changed recently that I need to act on?",
+      "answer": "App developers:\n- Recompile Daml that statically depends on splice-amulet against Splice 0.8.0 packages (amulet 0.1.23)\n- Migrate off TransferCommand (removed in 0.8.0) to token standard transfers\n- If you feature CC transfers, pass featured-app-right explicitly (Scan stops adding it)\n- Parse AmuletRules failures as failWithStatus error ids, not exceptions\n- Switch Scan /v1/state/acs and /v1/holdings/state to /v2 (string page tokens)\n\nValidator operators:\n- Upgrade to Splice 0.8.x before the SV switchover vote\n- Move off PostgreSQL 14 / splice-postgres chart before 2026-11-12\n\nFull notes: https://docs.canton.network/global-synchronizer/release-notes/splice"
+    },
+    {
+      "question": "What is Token Standard V2?",
+      "answer": "CIP-0112, live since Splice 0.6.11. Adds committed allocations (funds locked until settlement deadline), iterated allocations (executor sets the final amount at settlement), allocations for burn, single-step transfers, accounts for TradFi-style structures, and V2 EventLog_HoldingsChange history events that make parsing much simpler.\n\nRegistries must implement both the Daml interfaces and the OpenAPI specs (allocation, transfer, or both). Wallets should add V2 allocation and account support.\n\nSpec: https://github.com/canton-foundation/cips/blob/main/cip-0112/cip-0112.md\nDefinitions: https://github.com/canton-network/splice/tree/main/token-standard"
+    },
+    {
+      "question": "What are the latest CIPs and where do I find them?",
+      "answer": "GitHub is the source of truth for CIPs: https://github.com/canton-foundation/cips\n\n- Full index with current status: https://raw.githubusercontent.com/canton-foundation/cips/main/README.md\n- A single CIP: https://raw.githubusercontent.com/canton-foundation/cips/main/cip-XXXX/cip-XXXX.md\n- Drafts in progress (open PRs): https://github.com/canton-foundation/cips/pulls\n\nEarly discussion happens on cip-discuss (https://lists.sync.global/g/cip-discuss), which needs a groups.io login."
+    },
+    {
+      "question": "How do I apply to the Canton Development Fund?",
+      "answer": "1. Read the 2026–2028 strategic roadmap and RFPs: https://github.com/canton-foundation/canton-dev-fund/blob/main/2026-2028-strategic-roadmap.md\n2. Decide your path: RFP-aligned (submit under rfps/<category>/) or individual initiative (submit under proposals/)\n3. Discuss the need with the relevant SIG and gather evidence the problem is real\n4. Find a Development Fund Champion\n5. Open a PR using the current proposal template and follow the AI policy\n\nRepo: https://github.com/canton-foundation/canton-dev-fund\nMerged proposals: https://github.com/canton-foundation/canton-dev-fund/tree/main/proposals\nFund background: CIP-0082 (5% of minting) and CIP-0100 (governance)."
+    },
+    {
+      "question": "Are there official video tutorials?",
+      "answer": "Yes — start with the Canton Foundation YouTube 'CF Developer Series' playlist (4 videos): https://www.youtube.com/playlist?list=PLKh1lkOi-bco\n\nThen continue with the written tutorials at https://docs.canton.network/appdev/get-started/choose-your-path"
+    },
+    {
+      "question": "What is CantonBFT?",
+      "answer": "CantonBFT (formerly DA BFT) is Canton's parallel, multi-leader BFT ordering service. It replaces single-leader CometBFT for higher throughput and better resilience to slow or faulty peers.\n\n- GA for private synchronizers since Canton 3.5.15\n- Global Synchronizer switch prepared in Splice 0.8.0, executed via an LSU; done on DevNet, TestNet/MainNet timing to be announced"
+    },
+    {
+      "question": "Do I need to upgrade PostgreSQL?",
+      "answer": "Yes, if you run PostgreSQL 14. It reaches end of life on 2026-11-12. Splice supports PostgreSQL 18 (since 0.7.0) and Canton recommends 17.\n\nThe splice-postgres Helm chart is deprecated: no new versions after 2026-10-12 and no support after 2026-11-12. Move to a self-provisioned or managed database (e.g. Amazon RDS, Google Cloud SQL).\n\nGuide: https://docs.canton.network/global-synchronizer/production-operations/validator-postgres-migration"
+    },
+    {
+      "question": "Which Dev Fund proposals have been approved?",
+      "answer": "Check the proposals folder on GitHub — every file on main is an approved (merged) proposal:\nhttps://github.com/canton-foundation/canton-dev-fund/tree/main/proposals\n\nAPI (no key): https://api.github.com/repos/canton-foundation/canton-dev-fund/contents/proposals"
+    },
+    {
+      "question": "What's the fastest way to run my Daml project on a local Canton Network?",
+      "answer": "Use the Canton Builder Tool (Canton Foundation):\n\ncurl -fsSL https://raw.githubusercontent.com/canton-network-devs/Canton-Builder-Tool/main/install.sh | bash\ncanton builder start\ncanton builder deploy ./.daml/dist/your-project-0.0.1.dar\n\nYou get 3 validators (app-provider, app-user, sv), CC wallets (wallet.localhost:2000 / :3000), Scan UI (scan.localhost:4000) and JSON APIs on 2975/3975/4975. Needs Docker with >= 8 GB memory; macOS/Linux or WSL 2.\n\nFor full control with backend, Keycloak and PQS, follow Part B of https://guide.canton.foundation/localnet"
+    },
+    {
+      "question": "How do I plug my own Daml project into cn-quickstart?",
+      "answer": "Follow https://guide.canton.foundation/localnet (Part B). In short:\n1. git clone cn-quickstart, cd quickstart, make setup (OAuth2: y)\n2. Add your project under quickstart/daml/your-project/ and match sdk-version to DAML_SDK_VERSION in .env\n3. Add it to quickstart/daml/multi-package.yaml, then make build\n4. make start (and make capture-logs in another terminal)\n5. Get a Keycloak token, POST your DAR to http://localhost:3975/v2/packages (and 2975 for app-user)\n6. Find party IDs via GET /v2/parties, create contracts via /v2/commands/submit-and-wait\nReset with make stop && make clean-all."
+    },
+    {
+      "question": "Where can I find all tools, SDKs and explorers for Canton?",
+      "answer": "The Canton Developer Hub: https://dev-hub.canton.foundation/\n\nIt catalogues official and partner tools across Getting Started, Smart Contract Dev, AI Tools, Local Dev, SDKs, APIs, Data & Indexing, Wallet Integration and Identity. Machine-readable: https://raw.githubusercontent.com/canton-network-devs/Canton-Developer-Hub/main/Github%20Page/tools.json"
+    },
+    {
+      "question": "Are there AI tools for writing Daml?",
+      "answer": "Official from Canton Foundation:\n- CF Daml Skill for Claude: npx @canton-network-devs/cf-daml-skill (https://github.com/canton-network-devs/CF-Daml-Skill)\n- Canton Foundation MCP server: https://github.com/canton-network-devs/Build-on-Canton-MCP\n\nCommunity AI tools are listed in the AI Tools category of https://dev-hub.canton.foundation/"
+    },
+    {
+      "question": "I'm at a hackathon — where do I start?",
+      "answer": "1. Install dpm: https://docs.canton.network/sdks-tools/cli-tools/dpm\n2. dpm new <project> --template empty-skeleton\n3. Write Daml, dpm build, dpm test\n4. Deploy locally with the Canton Builder Tool or the LocalNet guide: https://guide.canton.foundation/localnet\n5. Browse tools at https://dev-hub.canton.foundation/ and watch the CF Developer Series on YouTube\n6. Ask questions in the App Development category of https://forum.canton.network/"
     }
   ]
 }
