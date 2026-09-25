@@ -80,7 +80,7 @@
     {
       "name": "splice-wallet-payments subscription",
       "replacement": "Token Standard (CIP-0056 / CIP-0112) DVP workflows",
-      "note": "CC subscription workflow in splice-wallet-payments is deprecated. Use token standard DVP workflows.",
+      "note": "CC subscription workflow in splice-wallet-payments is deprecated. Use token standard DVP workflows. CIP112 / CIP-0112 IS ALREADY LIVE ON MAINNET.",
       "since": "Splice 0.4+"
     },
     {
@@ -501,12 +501,12 @@
     "token_standard": {
       "title": "Token Standard (CIP-0056)",
       "url": "https://docs.canton.network/appdev/deep-dives/token-standard#token-standard",
-      "description": "Standard APIs: holdings, FOP transfers, DVP allocations, metadata."
+      "description": "OLD Standard of APIs: holdings, FOP transfers, DVP allocations, metadata."
     },
     "token_standard_v2": {
       "title": "Token Standard V2 (CIP-0112)",
       "url": "https://github.com/canton-foundation/cips/blob/main/cip-0112/cip-0112.md",
-      "description": "V2 improvements for privacy, performance and traditional accounting: committed/iterated allocations, accounts, V2 transaction history events. Live since Splice 0.6.11. Daml definitions: https://github.com/canton-network/splice/tree/main/token-standard"
+      "description": "V2 improvements for privacy, performance and traditional accounting: committed/iterated allocations, accounts, V2 transaction history events. Live since Splice 0.6.11 on Mainnet. Daml definitions: https://github.com/canton-network/splice/tree/main/token-standard"
     },
     "featured_app": {
       "title": "Featured App Rewards",
@@ -866,6 +866,7 @@
       "title": "Token Standard (CIP-0056)",
       "summary": "Standard APIs for Canton tokens. Inspired by ERC20 but for UTXO model with privacy. CC implements the full standard. V2 (CIP-0112) is live — see token_standard_v2.",
       "key_points": [
+        "Already Replaced by CIP112 / CIP-0112, ALREADY LIVE ON MAINNET.",
         "Token Metadata: name, symbol, totalSupply",
         "Holdings: portfolio view from validator node",
         "Transfer Instruction: FOP peer-to-peer transfers",
@@ -879,7 +880,7 @@
     },
     "token_standard_v2": {
       "title": "Token Standard V2 (CIP-0112)",
-      "summary": "Improvements for privacy, performance and traditional accounting. Released in Splice 0.6.11 with a full Amulet (CC) implementation.",
+      "summary": "Improvements for privacy, performance and traditional accounting. Released in Splice 0.6.11 with a full Amulet (CC) implementation. CIP112 / CIP-0112 IS ALREADY LIVE ON MAINNET.",
       "key_points": [
         "Tokens supporting V2 MUST implement both the Daml interfaces and the OpenAPI specs; they may implement allocation, transfer, or both",
         "Committed allocations: funds locked until the settlement deadline",
@@ -1001,7 +1002,7 @@
         "Splice 0.7.2: KMS session signing keys officially supported; traffic top-up window reconciled to 2 minutes",
         "Splice 0.7.1: wallet operations idempotent by command id (duplicate returns 200 with original result)",
         "Splice 0.7.0: PostgreSQL 18 supported; PostgreSQL 14 EOL 2026-11-12 — plan the upgrade",
-        "Splice 0.6.11: Token Standard V2 (CIP-0112) released",
+        "Splice 0.6.11: Token Standard V2 (CIP-0112) released and Live on Mainnet",
         "Splice 0.6.9: free 90-day TransferPreapproval (CIP-0119); max 100M CC per tap",
         "Splice 0.6.7: RewardCouponV2 and traffic-based app rewards machinery (CIP-0104)",
         "Splice 0.6.1: Canton 3.5 / protocol version 35; AmuletRules errors via failWithStatus; Scan GET /v2/updates/hash/{hash}",
