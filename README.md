@@ -8,19 +8,13 @@ When developers use AI tools to learn Canton, they get recommended deprecated to
 
 **Requirements:** Node.js 18+
 
-### Claude Desktop (one command)
+### Claude or Claude Code on Desktop (one command)
 
 ```bash
 npx @canton-network-devs/canton-mcp-server install
 ```
 
 Restart Claude Desktop and the Canton tools appear automatically. The installer backs up your existing config and keeps any other MCP servers you have. Add `--yes` to skip the prompts.
-
-### Claude Code
-
-```bash
-claude mcp add canton-dev -- npx -y @canton-network-devs/canton-mcp-server@latest
-```
 
 ### Cursor and other MCP clients
 
