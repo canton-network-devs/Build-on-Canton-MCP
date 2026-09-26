@@ -1,6 +1,6 @@
 {
   "name": "@canton-network-devs/canton-mcp-server",
-  "version": "2.2.1",
+  "version": "3.0.0",
   "description": "Canton Network MCP Server for Claude Desktop",
   "type": "module",
   "main": "index.js",
@@ -29,12 +29,12 @@
     "canton-network",
     "claude"
   ],
-  "author": "Jatin, DevRel, Canton Foundation",
+  "author": "Jatin, DevRel Manager, Canton Foundation",
   "license": "Apache-2.0",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.1",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "express": "^4.21.2",
-    "zod": "^3.23.8"
+    "zod": "^4.6.0"
   },
   "engines": {
     "node": ">=18"
