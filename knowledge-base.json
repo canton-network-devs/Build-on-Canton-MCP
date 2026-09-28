@@ -707,6 +707,16 @@
       "title": "Canton Network API Overview",
       "url": "https://docs.canton.network/sdks-tools/",
       "description": "Overview of all Canton APIs: Ledger API, JSON API, Admin API, Scan API, Validator API, Wallet API."
+    },
+    "topology_reference": {
+      "title": "Topology reference (namespaces, party hosting, package vetting)",
+      "url": "https://docs.canton.network/overview/reference/topology",
+      "description": "Authoritative reference for namespaces, PartyToParticipant hosting and permissions (Observation / Confirmation / Submission), VettedPackages, namespace delegation chains and key revocation."
+    },
+    "token_metadata_api": {
+      "title": "Token Standard metadata service OpenAPI (token-metadata-v1)",
+      "url": "https://docs.canton.network/openapi/splice/token-standard/token-metadata-v1.yaml",
+      "description": "Spec for the metadata service every CIP-0112 registry implements: /registry/metadata/v1/info, /registry/metadata/v1/instruments, /registry/metadata/v1/instruments/{instrumentId}."
     }
   },
   "CONCEPTS": {
@@ -1119,6 +1129,34 @@
         "Want videos → CF Developer Series on YouTube",
         "Using an AI assistant → CF Daml Skill and the Canton Foundation MCP"
       ]
+    },
+    "package_vetting": {
+      "title": "Package vetting (VettedPackages)",
+      "summary": "A Participant Node's owner must explicitly declare which third-party Daml packages that node is willing to run, using the VettedPackages topology mapping. Uploading a DAR is not the same thing as vetting it.",
+      "key_points": [
+        "Vetting is a topology mapping in the Synchronizer's topology state, not a property of the package itself",
+        "Only the key holders of a Participant Node may change the list of packages vetted by that node",
+        "Vetting can be restricted to a time window, open-ended at either end",
+        "VettedPackages also decides which version of a template is used to interpret a Ledger API command",
+        "A command can fail with \"No synchronizer satisfies the vetting requirements\" even though the package uploaded successfully and is listed as registered",
+        "If you did not choose the node hosting your parties, you cannot vet a package on it yourself: ask that node's operator to authorise it",
+        "Reference: https://docs.canton.network/overview/reference/topology"
+      ]
+    },
+    "token_metadata_registry": {
+      "title": "Token metadata service (token-metadata-v1)",
+      "summary": "Every CIP-0112 registry implements a metadata service. Use it to discover a network's instrument IDs, supported APIs, and decimals instead of hardcoding IDs from another network.",
+      "key_points": [
+        "GET /registry/metadata/v1/info returns the registry adminId and the registry-wide supportedApis map",
+        "GET /registry/metadata/v1/instruments lists instruments, paginated with pageSize (default 25) and pageToken",
+        "GET /registry/metadata/v1/instruments/{instrumentId} returns one Instrument: id, name, symbol, decimals, paused, totalSupply, totalSupplyAsOf, supportedApis",
+        "supportedApis maps an API name to its minor version, e.g. splice-api-token-metadata-v1 -> 1",
+        "The registry-wide info call only lists registry-wide APIs: check the per-instrument endpoint to see what a specific instrument supports",
+        "Instrument IDs are network-specific. A MainNet instrument ID is not valid on DevNet or LocalNet, and an instrument may not exist on a given network at all",
+        "decimals is 0-10 (default 10) because Daml represents holding amounts as Decimal with 10 decimal places, precise for 38 digits. decimals=0 means the instrument can only be held in whole units",
+        "paused=true means the instrument cannot be transferred or allocated",
+        "Spec: https://docs.canton.network/openapi/splice/token-standard/token-metadata-v1.yaml"
+      ]
     }
   },
   "NETWORKS": {
@@ -1140,7 +1178,7 @@
     "devnet": {
       "name": "DevNet",
       "description": "Shared dev network. Resets periodically. Self-feature apps for testing. New features (e.g. CantonBFT switch) land here first.",
-      "note": "Join #gsf-global-synchronizer-appdev on Slack."
+      "note": "Join #gsf-global-synchronizer-appdev on Slack.\nParty IDs are created in the namespace of the Participant Node that hosts them, so parties on a shared network share a namespace suffix. Only that node's key holders can change its VettedPackages mapping, so on a network you do not host you cannot vet a package yourself: ask the node operator to authorise your package. See CONCEPTS.package_vetting."
     },
     "testnet": {
       "name": "TestNet",
@@ -1432,6 +1470,22 @@
     {
       "question": "I'm at a hackathon — where do I start?",
       "answer": "1. Install dpm: https://docs.canton.network/sdks-tools/cli-tools/dpm\n2. dpm new <project> --template empty-skeleton\n3. Write Daml, dpm build, dpm test\n4. Deploy locally with the Canton Builder Tool or the LocalNet guide: https://guide.canton.foundation/localnet\n5. Browse tools at https://dev-hub.canton.foundation/ and watch the CF Developer Series on YouTube\n6. Ask questions in the App Development category of https://forum.canton.network/"
+    },
+    {
+      "question": "Why does my command fail with \"No synchronizer satisfies the vetting requirements\"?",
+      "answer": "The package is not in the vetted-package state of the nodes that could process the command.\n\nUploading a DAR and vetting it are separate steps. A package can be listed and reported as registered while no node will run it. Command submission needs a node whose VettedPackages topology mapping includes the package, and a connected Synchronizer that accepts that node's topology state.\n\nVetting is authorised by the key holders of the Participant Node that owns it, not by the uploader, and it can be limited to a time window. If your parties live on a node you do not operate, you cannot fix this yourself: send the node operator the package name, version and package ID and ask them to authorise it.\n\nCheck with: dpm damlc inspect-dar --json my-app.dar for the package ID. See CONCEPTS.package_vetting."
+    },
+    {
+      "question": "How do I make sure my client uses the exact package version I uploaded?",
+      "answer": "Reference the package by its ID, not its name, and set packageIdSelectionPreference on the command.\n\nA template ID is <packageId>:<Module>:<Template>, and the package ID is a content hash. The same package name at two versions means two different IDs, and a version bump can change templates without changing the name. The package hash is the only reliable identifier for a deployed package.\n\nThe JSON Ledger API accepts an optional packageIdSelectionPreference array on the update request: the client's package-id selection preference for resolving package names and interface instances during command submission and interpretation. Put the exact package ID you intend to use first in that list so resolution is deterministic.\n\nFor gRPC clients the equivalent control is the package map on the Update message.\n\nRead the field's definition live from any participant: curl http://localhost:7575/docs/openapi (unauthenticated, YAML)."
+    },
+    {
+      "question": "How do I find the instrument ID for a Token Standard asset on DevNet or TestNet?",
+      "answer": "Query that network's registry metadata service. Do not reuse an instrument ID from another network.\n\nGET {registry}/registry/metadata/v1/info returns the registry adminId and the registry-wide supportedApis.\nGET {registry}/registry/metadata/v1/instruments lists the instruments that exist, paginated with pageSize and pageToken.\nGET {registry}/registry/metadata/v1/instruments/{instrumentId} returns one instrument, including decimals, paused and the per-instrument supportedApis.\n\nInstrument IDs are network-specific and an instrument may not exist on a given network at all, so a hardcoded ID fails confusingly. Check paused before offering a transfer or allocation: a paused instrument cannot be transferred or allocated. Note that the registry-wide info call does not list per-instrument capabilities; use the instrument endpoint for that.\n\nSee CONCEPTS.token_metadata_registry."
+    },
+    {
+      "question": "Why is my Token Standard amount wrong or rejected? Check decimals.",
+      "answer": "Daml represents holding amounts as Decimal values with 10 decimal places, precise for 38 digits. Every Token Standard instrument declares its own decimals as an integer between 0 and 10 (default 10).\n\nConsequences worth checking:\n\n- Serialise amounts as decimal strings, not JSON numbers, and keep full precision rather than formatting to the instrument's display decimals.\n- decimals is a display and input hint for wallets. It does not change the on-chain representation, which is always 10 decimal places.\n- decimals=0 means the instrument can only be held in whole units.\n- Do not multiply by 10^decimals yourself when the amount is already a decimal string.\n\nRead decimals from the instrument metadata rather than assuming 10 or assuming the mainnet value. See CONCEPTS.token_metadata_registry."
     }
   ]
 }
