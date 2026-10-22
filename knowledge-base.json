@@ -13,14 +13,14 @@
     },
     {
       "name": "@daml/ledger",
-      "replacement": "@c7/ledger",
-      "note": "@daml/ledger is deprecated. Use community-maintained @c7/ledger.",
+      "replacement": "@c7-digital/ledger",
+      "note": "@daml/ledger is deprecated. Use community-maintained @c7-digital/ledger.",
       "since": "Canton 3.3+"
     },
     {
       "name": "@daml/react",
-      "replacement": "@c7/react",
-      "note": "@daml/react is deprecated. Use community-maintained @c7/react.",
+      "replacement": "@c7-digital/react",
+      "note": "@daml/react is deprecated. Use community-maintained @c7-digital/react.",
       "since": "Canton 3.3+"
     },
     {
@@ -73,7 +73,7 @@
     },
     {
       "name": "daml ledger allocate-parties",
-      "replacement": "POST /v2/parties/allocate on JSON Ledger API",
+      "replacement": "POST /v2/parties on JSON Ledger API",
       "note": "Use the JSON Ledger API (port 7575) or gRPC PartyManagementService.",
       "since": "Canton 3.4"
     },
@@ -770,11 +770,11 @@
         "Format: <hint>::<namespace_fingerprint> e.g. alice::12200b11a778...",
         "Party Name: max 185 chars [a-zA-Z0-9_], unique in namespace",
         "Fingerprint: from validator's key (internal) or external signing key",
-        "Allocate via Admin API or JSON Ledger API POST /v2/parties/allocate",
+        "Allocate via Admin API or JSON Ledger API POST /v2/parties",
         "External parties retain own signing keys for security",
         "Avoid ephemeral parties — one party per wallet/account"
       ],
-      "api_example": "curl -d '{\"partyIdHint\":\"Alice\", \"identityProviderId\": \"\"}' -H 'Content-Type: application/json' -X POST localhost:7575/v2/parties/allocate"
+      "api_example": "curl -d '{\"partyIdHint\":\"Alice\", \"identityProviderId\": \"\"}' -H 'Content-Type: application/json' -X POST localhost:7575/v2/parties"
     },
     "cip_0103_standard": {
       "title": "CIP-0103 — Canton dApp Standard",
@@ -1255,7 +1255,7 @@
     },
     {
       "question": "How do I create a party?",
-      "answer": "curl -d '{\"partyIdHint\":\"Alice\",\"identityProviderId\":\"\"}' -H 'Content-Type: application/json' -X POST localhost:7575/v2/parties/allocate\n\nReturns: {\"party\":\"Alice::1220...\"}\n\nIMPORTANT: Cannot generate party IDs locally (unlike ETH). Need running participant node."
+      "answer": "curl -d '{\"partyIdHint\":\"Alice\",\"identityProviderId\":\"\"}' -H 'Content-Type: application/json' -X POST localhost:7575/v2/parties\n\nReturns: {\"party\":\"Alice::1220...\"}\n\nIMPORTANT: Cannot generate party IDs locally (unlike ETH). Need running participant node."
     },
     {
       "question": "How do I create a contract?",
@@ -1323,7 +1323,7 @@
     },
     {
       "question": "TypeScript libraries?",
-      "answer": "1. Generate stubs from JSON API OpenAPI spec (openapi-fetch)\n2. dpm codegen-js or dpm codegen-alpha-typescript for Daml bindings\n3. @c7/ledger + @c7/react (NOT deprecated @daml/ledger)\n\nTutorial: https://docs.canton.network/reference/typescript#daml-types"
+      "answer": "1. Generate stubs from JSON API OpenAPI spec (openapi-fetch)\n2. dpm codegen-js or dpm codegen-alpha-typescript for Daml bindings\n3. @c7-digital/ledger + @c7-digital/react (NOT deprecated @daml/ledger)\n\nTutorial: https://docs.canton.network/reference/typescript#daml-types"
     },
     {
       "question": "What is Zenith?",
